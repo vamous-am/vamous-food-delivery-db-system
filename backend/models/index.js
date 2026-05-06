@@ -104,6 +104,21 @@ const CartItem = sequelize.define('CartItem', {
   ]
 });
 
+// 9. PAYMENT MODEL (Day 6 - Retry-Friendly)
+const Payment = sequelize.define('Payment', {
+  order_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+    // unique: true is REMOVED so users can retry failed payments!
+  },
+  amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+  status: {
+    type: DataTypes.ENUM('pending', 'completed', 'failed'),
+    defaultValue: 'pending'
+  },
+  payment_method: { type: DataTypes.STRING, defaultValue: 'simulated' }
+}, { tableName: 'payments', timestamps: true });
+
 
 // ==========================================
 // STRICT RELATIONSHIPS (allowNull: false)
@@ -142,4 +157,8 @@ CartItem.belongsTo(User, { foreignKey: { name: 'user_id', allowNull: false } });
 MenuItem.hasMany(CartItem, { foreignKey: { name: 'menu_item_id', allowNull: false } });
 CartItem.belongsTo(MenuItem, { foreignKey: { name: 'menu_item_id', allowNull: false } });
 
-module.exports = { sequelize, User, Restaurant, MenuItem, Order, OrderItem, OrderStatusHistory, Driver, CartItem };
+// PAYMENT RELATIONSHIPS (Allowing multiple retries)
+Order.hasMany(Payment, { foreignKey: { name: 'order_id', allowNull: false } });
+Payment.belongsTo(Order, { foreignKey: { name: 'order_id', allowNull: false } });
+
+module.exports = { sequelize, User, Restaurant, MenuItem, Order, OrderItem, OrderStatusHistory, Driver, CartItem, Payment };
