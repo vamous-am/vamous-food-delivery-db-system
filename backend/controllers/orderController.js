@@ -13,7 +13,8 @@ exports.createOrder = async (req, res) => {
     // 1. Fetch Cart Items directly from DB (The Single Source of Truth)
     const cartItems = await CartItem.findAll({
       where: { user_id },
-      include: [{ model: MenuItem }]
+      include: [{ model: MenuItem }],
+      transaction: t
     });
 
     if (cartItems.length === 0) throw new Error('Your cart is empty');
