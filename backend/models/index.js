@@ -80,7 +80,8 @@ const OrderStatusHistory = sequelize.define('OrderStatusHistory', {
 // 7. DRIVER MODEL (Added Unique Index for user_id)
 const Driver = sequelize.define('Driver', {
   license_number: { type: DataTypes.STRING, allowNull: false },
-  is_active: { type: DataTypes.BOOLEAN, defaultValue: true }
+  is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  is_available: { type: DataTypes.BOOLEAN, defaultValue: true }
 }, {
   tableName: 'drivers',
   timestamps: false,
