@@ -1,0 +1,58 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import RestaurantList from './pages/RestaurantList';
+import Menu from './pages/Menu';
+import Cart from './pages/Cart';
+import OrderConfirmation from './pages/OrderConfirmation';
+
+// Security Wrapper: Blocks users who aren't logged in
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
+
+        {/* PUBLIC ROUTES */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* SECURE PROTECTED ROUTES */}
+        <Route path="/restaurants" element={
+          <ProtectedRoute>
+            <RestaurantList />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/restaurants/:id/menu" element={
+          <ProtectedRoute>
+            <Menu />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/cart" element={
+          <ProtectedRoute>
+            <Cart />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/orders/:id" element={
+          <ProtectedRoute>
+            <OrderConfirmation />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
