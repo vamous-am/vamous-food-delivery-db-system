@@ -6,6 +6,9 @@ const { protect, restrictTo } = require('../middleware/authMiddleware');
 // Customer creates order
 router.post('/', protect, orderController.createOrder);
 
+// 👉 THE MISSING LINE! Get Single Order
+router.get('/:id', protect, orderController.getOrderById);
+
 // Get order history with pagination
 router.get('/', protect, orderController.getMyOrders);
 

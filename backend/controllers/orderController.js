@@ -128,46 +128,33 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// GET /api/orders/:id
+// GET /api/orders/:id (View single order)
 exports.getOrderById = async (req, res) => {
   try {
-    // 1. Base query looks for the specific order ID
-    const whereClause = { id: req.params.id };
+    const { id } = req.params;
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ status: 'fail', message: 'Invalid order ID format' });
+    }
 
-    // 2. SECURITY FIX: Role-Based Scoping (Prevent IDOR)
+    const whereClause = { id };
+    
+    // Security: Customers only see their own orders!
     if (req.user.role === 'customer') {
-      // Customers can ONLY look up their own user_id
       whereClause.user_id = req.user.id;
     } else if (req.user.role === 'driver') {
-      // Drivers can ONLY look up orders assigned to them
-      const { Driver } = require('../models');
-      const driverProfile = await Driver.findOne({ where: { user_id: req.user.id } });
-      if (!driverProfile) {
-        return res.status(404).json({ status: 'fail', message: 'Order not found or access denied' });
-      }
-      whereClause.driver_id = driverProfile.id;
+      whereClause.driver_id = req.user.id;
     }
-    // (Admins and Restaurant Owners bypass this and can view the order)
 
-    // 3. Fetch the data securely
-    const { Restaurant } = require('../models');
-    const order = await Order.findOne({
-      where: whereClause,
-      include: [
-        { model: OrderItem },
-        { model: OrderStatusHistory },
-        { model: Restaurant, attributes: ['name'] }
-      ]
-    });
+    const order = await Order.findOne({ where: whereClause });
 
     if (!order) {
-      // Ambiguous error message is good for security (don't reveal if it exists or not)
-      return res.status(404).json({ status: 'fail', message: 'Order not found or access denied' });
+      return res.status(404).json({ status: 'fail', message: 'Order not found' });
     }
 
     res.status(200).json({ status: 'success', data: order });
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    console.error("Get Order Error:", error);
+    res.status(500).json({ status: 'fail', message: 'Internal server error' });
   }
 };
 
