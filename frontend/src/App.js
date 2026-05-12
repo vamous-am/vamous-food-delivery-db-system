@@ -6,6 +6,7 @@ import RestaurantList from './pages/RestaurantList';
 import Menu from './pages/Menu';
 import Cart from './pages/Cart';
 import OrderConfirmation from './pages/OrderConfirmation';
+import MyOrders from './pages/MyOrders';
 
 // Security Wrapper: Blocks users who aren't logged in
 const ProtectedRoute = ({ children }) => {
@@ -42,6 +43,12 @@ function App() {
         <Route path="/cart" element={
           <ProtectedRoute>
             <Cart />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/orders" element={
+          <ProtectedRoute>
+            <MyOrders />
           </ProtectedRoute>
         } />
 
