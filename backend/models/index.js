@@ -6,12 +6,10 @@ const User = sequelize.define('User', {
   name: { type: DataTypes.STRING, allowNull: false },
   email: { type: DataTypes.STRING, allowNull: false, unique: true },
   password: { type: DataTypes.STRING, allowNull: false },
-  role: { type: DataTypes.ENUM('customer', 'admin', 'restaurant_owner', 'driver'), defaultValue: 'customer' }
-}, {
-  tableName: 'users',
-  timestamps: false,
-  indexes: [{ unique: true, fields: ['email'] }]
-});
+  role: { type: DataTypes.ENUM('customer', 'admin', 'restaurant_owner', 'driver'), defaultValue: 'customer' },
+  restaurant_id: { type: DataTypes.INTEGER, allowNull: true }
+
+}, { tableName: 'users', timestamps: false, indexes: [{ unique: true, fields: ['email'] }] });
 
 // 2. RESTAURANT MODEL
 const Restaurant = sequelize.define('Restaurant', {
@@ -161,5 +159,9 @@ CartItem.belongsTo(MenuItem, { foreignKey: { name: 'menu_item_id', allowNull: fa
 // PAYMENT RELATIONSHIPS (Allowing multiple retries)
 Order.hasMany(Payment, { foreignKey: { name: 'order_id', allowNull: false } });
 Payment.belongsTo(Order, { foreignKey: { name: 'order_id', allowNull: false } });
+
+// 👉 ADD THESE TWO NEW LINES:
+Restaurant.hasMany(User, { foreignKey: 'restaurant_id' });
+User.belongsTo(Restaurant, { foreignKey: 'restaurant_id' });
 
 module.exports = { sequelize, User, Restaurant, MenuItem, Order, OrderItem, OrderStatusHistory, Driver, CartItem, Payment };

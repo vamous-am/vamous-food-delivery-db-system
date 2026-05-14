@@ -8,7 +8,7 @@ const STATUS_COLORS = {
 };
 
 
-// 👉 FIX 1: Frontend knows the legal moves now!
+// Valid transitions
 const VALID_TRANSITIONS = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['PREPARING', 'CANCELLED'],
@@ -83,9 +83,9 @@ const OrderConfirmation = () => {
     </div>
   );
   const statusColor = STATUS_COLORS[order.status] || 'gray';
-  // 👉 FIX 1: Find only the legal next moves for the dropdown
+  // Find only the legal next moves for the dropdown
   const availableNextStates = VALID_TRANSITIONS[order.status] ||[];
-  // 👉 FIX 2: Timeline mapping using OrderStatusHistories!
+  // Timeline mapping using OrderStatusHistories
   const historyStatuses = order.OrderStatusHistories?.map(h => h.status) ||[];
 // Calculate how far along the main timeline we are (Ignore CANCELLED for the visual tracker)
   const TIMELINE_STAGES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED'];
@@ -114,7 +114,7 @@ const OrderConfirmation = () => {
           {error && <span style={{ color: 'orange', marginLeft: '8px' }}>({error})</span>}
         </p>
       </div>
-      {/* 👉 FIX 2: THE TIMELINE UI */}
+      {/* THE TIMELINE UI */}
       <div style={{ ...styles.card, marginTop: '16px' }}>
         <h3 style={{ margin: '0 0 16px' }}>Live Tracking</h3>
         {isCancelled ? (
@@ -174,7 +174,7 @@ const OrderConfirmation = () => {
             <>
               <p style={styles.meta}>Backend will reject illegal transitions.</p>
               <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                {/* 👉 FIX 1: SMART DROPDOWN (Only shows legal moves!) */}
+                {/* SMART DROPDOWN (Only shows legal moves!) */}
                 <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={styles.select}>
                   <option value="">Select next status…</option>
                   {availableNextStates.map(s => (

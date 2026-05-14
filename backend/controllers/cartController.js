@@ -13,7 +13,7 @@ exports.getCart = async (req, res) => {
   }
 };
 
-// 2. POST /api/cart (SURGICAL FIX VERSION)
+// 2. POST /api/cart
 exports.addToCart = async (req, res) => {
   const t = await sequelize.transaction();
 

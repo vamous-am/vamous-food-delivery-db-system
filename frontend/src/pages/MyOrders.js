@@ -15,27 +15,28 @@ const MyOrders = () => {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // 👉 FIX 3: A real retry trigger that forces useEffect to run
-  const [retryTrigger, setRetryTrigger] = useState(0); 
+
   const navigate = useNavigate();
 
+  // Defined OUTSIDE useEffect so the retry button can trigger it directly
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(`/orders?limit=${PAGE_LIMIT}&offset=${offset}`);
+      setOrders(response.data.data);
+      setTotal(response.data.total);
+    } catch (err) {
+      setError('Could not load your orders. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await axios.get(`/orders?limit=${PAGE_LIMIT}&offset=${offset}`);
-        setOrders(response.data.data);
-        setTotal(response.data.total); 
-      } catch (err) {
-        setError('Could not load your orders. Check your connection and try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrders();
-  }, [offset, retryTrigger]); // 👉 Depend on retryTrigger!
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offset]);
   const currentPage = Math.floor(offset / PAGE_LIMIT) + 1;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
   const hasPrev = offset > 0;
@@ -47,7 +48,7 @@ const MyOrders = () => {
     <div style={styles.center}>
       <p style={{ color: 'red', marginBottom: '12px' }}>{error}</p>
       {/* 👉 FIX 3: Actually triggers a re-fetch now! */}
-      <button onClick={() => setRetryTrigger(prev => prev + 1)} style={styles.btn}>Retry</button>
+      <button onClick={fetchOrders} style={styles.btn}>Retry</button>
     </div>
   );
 

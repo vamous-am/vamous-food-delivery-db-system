@@ -2,15 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
 
-// FIX 3: Isolate constants. In a real app, this comes from a /checkout-preview API.
-const DELIVERY_FEE = 50.00;
+// In a real app, this comes from a /checkout-preview API.
+const DELIVERY_FEE = 30.00;
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [processingId, setProcessingId] = useState(null); // FIX 5: Per-item locking!
+  const [processingId, setProcessingId] = useState(null); // Per-item locking
 
   const [error, setError] = useState('');
   const [address, setAddress] = useState('');
@@ -73,7 +73,7 @@ const Cart = () => {
     } catch (err) {
       alert(err.response?.data?.message || 'Checkout failed. Please try again.');
 
-      // FIX 8: Phantom Cart Sync. If the network dropped but backend succeeded, we sync.
+      // Phantom Cart Sync. If the network dropped but backend succeeded, we sync.
       await fetchCart();
     } finally {
       setCheckoutLoading(false);
@@ -82,7 +82,7 @@ const Cart = () => {
 
   if (loading) return <h2 style={{ padding: '20px' }}>Loading cart...</h2>;
 
-  // FIX 6: Safe chaining (item?.MenuItem?.price) prevents crashes if backend shape changes
+  // Safe chaining (item?.MenuItem?.price) prevents crashes if backend shape changes
   const subtotal = cartItems.reduce((sum, item) => sum + ((item?.MenuItem?.price || 0) * item.quantity), 0);
   const total = subtotal + DELIVERY_FEE;
 
@@ -96,7 +96,7 @@ const Cart = () => {
       {cartItems.length === 0 ? (
         <div style={{ textAlign: 'center', marginTop: '40px' }}>
           <p style={{ fontSize: '18px' }}>Your cart is completely empty.</p>
-          {/* FIX 4: Empty State Recovery CTA */}
+          {/* Empty State Recovery CTA */}
           <button onClick={() => navigate('/restaurants')} style={{ padding: '10px 20px', background: '#000', color: '#fff', cursor: 'pointer', border: 'none', fontSize: '16px' }}>
             Go Find Some Food
           </button>

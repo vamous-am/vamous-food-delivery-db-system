@@ -5,15 +5,13 @@ import Register from './pages/Register';
 import RestaurantList from './pages/RestaurantList';
 import Menu from './pages/Menu';
 import Cart from './pages/Cart';
-import OrderConfirmation from './pages/OrderConfirmation';
 import MyOrders from './pages/MyOrders';
+import OrderConfirmation from './pages/OrderConfirmation';
+import AdminDashboard from './pages/AdminDashboard';
 
-// Security Wrapper: Blocks users who aren't logged in
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!token) return <Navigate to="/login" replace />;
   return children;
 };
 
@@ -22,41 +20,20 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
-
+        
         {/* PUBLIC ROUTES */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
+        
         {/* SECURE PROTECTED ROUTES */}
-        <Route path="/restaurants" element={
-          <ProtectedRoute>
-            <RestaurantList />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/restaurants/:id/menu" element={
-          <ProtectedRoute>
-            <Menu />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/cart" element={
-          <ProtectedRoute>
-            <Cart />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/orders" element={
-          <ProtectedRoute>
-            <MyOrders />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/orders/:id" element={
-          <ProtectedRoute>
-            <OrderConfirmation />
-          </ProtectedRoute>
-        } />
+        <Route path="/restaurants" element={<ProtectedRoute><RestaurantList /></ProtectedRoute>} />
+        <Route path="/restaurants/:id/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
+        <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+        <Route path="/orders/:id" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
+        
+        {/* Admin Route */}
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

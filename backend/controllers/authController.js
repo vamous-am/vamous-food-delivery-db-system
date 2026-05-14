@@ -6,7 +6,7 @@ const signToken = (user) => {
   return jwt.sign(
     { id: user.id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' } // <-- Fallback added here
+    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
   );
 };
 // 1. POST /api/auth/register
