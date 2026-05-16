@@ -164,4 +164,28 @@ Payment.belongsTo(Order, { foreignKey: { name: 'order_id', allowNull: false } })
 Restaurant.hasMany(User, { foreignKey: 'restaurant_id' });
 User.belongsTo(Restaurant, { foreignKey: 'restaurant_id' });
 
-module.exports = { sequelize, User, Restaurant, MenuItem, Order, OrderItem, OrderStatusHistory, Driver, CartItem, Payment };
+// 10. REVIEW MODEL
+const Review = sequelize.define('Review', {
+  rating: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: { min: 1, max: 5 },
+  },
+  comment: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+}, {
+  tableName:  'reviews',
+  timestamps: true,
+  indexes: [{ fields: ['order_id'] }],
+});
+
+Order.hasOne(Review, {
+  foreignKey: { name: 'order_id', allowNull: false, unique: true },
+});
+Review.belongsTo(Order, {
+  foreignKey: { name: 'order_id', allowNull: false, unique: true },
+});
+
+module.exports = { sequelize, User, Restaurant, MenuItem, Order, OrderItem, OrderStatusHistory, Driver, CartItem, Payment, Review };

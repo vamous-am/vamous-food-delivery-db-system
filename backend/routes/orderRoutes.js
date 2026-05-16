@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const reviewController = require('../controllers/reviewController');
 const { protect, restrictTo } = require('../middleware/authMiddleware'); 
 
 // Customer creates order 
@@ -21,4 +22,7 @@ router.put('/:id/status', protect, restrictTo('admin', 'restaurant_owner', 'driv
 // Driver specific actions (Day 8)
 router.put('/:id/assign-driver', protect, restrictTo('driver'), orderController.assignDriver);
 router.put('/:id/complete-delivery', protect, restrictTo('driver'), orderController.completeDelivery);
+
+router.post('/:id/reviews', protect, restrictTo('customer'), reviewController.addReview);
+
 module.exports = router;

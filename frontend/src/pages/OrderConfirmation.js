@@ -1,3 +1,4 @@
+// frontend/src/pages/OrderConfirmation.js
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
@@ -7,17 +8,7 @@ const STATUS_COLORS = {
   READY: 'teal', OUT_FOR_DELIVERY: 'goldenrod', COMPLETED: 'green', CANCELLED: 'red',
 };
 
-
-// Valid transitions
-const VALID_TRANSITIONS = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PREPARING', 'CANCELLED'],
-  PREPARING: ['READY', 'CANCELLED'],
-  READY: ['OUT_FOR_DELIVERY', 'CANCELLED'],
-  OUT_FOR_DELIVERY: ['COMPLETED'],
-  COMPLETED: [],
-  CANCELLED:[],
-};
+const ALL_STATUSES = ['CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'];
 
 const OrderConfirmation = () => {
   const { id } = useParams();
@@ -27,7 +18,13 @@ const OrderConfirmation = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [newStatus, setNewStatus] = useState('');
-  const [updating, setUpdating] = useState(false); 
+  const [updating, setUpdating] = useState(false);
+
+  // --- Review State ---
+  const [rating,     setRating]     = useState(5);
+  const [comment,    setComment]    = useState('');
+  const [reviewStatus, setReviewStatus] = useState(''); // 'success' | 'error' message
+  const [submitting, setSubmitting] = useState(false);  // prevents double-submit
 
   const currentUser = (() => {
     try { return JSON.parse(localStorage.getItem('user')) || {}; }
@@ -46,7 +43,7 @@ const OrderConfirmation = () => {
         clearInterval(intervalRef.current);
         setError(status === 404 ? 'Order not found.' : 'You are not authorized to view this order.');
       } else {
-        setError('Network error. Retrying in 10 seconds…');
+        setError('Network error. Retrying...');
       }
     } finally {
       setLoading(false);
@@ -59,7 +56,7 @@ const OrderConfirmation = () => {
     fetchOrder(); 
     intervalRef.current = setInterval(fetchOrder, 10000);
     return () => clearInterval(intervalRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleUpdateStatus = async () => {
@@ -67,7 +64,7 @@ const OrderConfirmation = () => {
     setUpdating(true);
     try {
       await axios.put(`/orders/${id}/status`, { status: newStatus });
-      setNewStatus(''); 
+      setNewStatus('');
       await fetchOrder(); 
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update status.');
@@ -75,75 +72,47 @@ const OrderConfirmation = () => {
       setUpdating(false);
     }
   };
-  if (loading) return <div style={styles.center}><p style={{ color: '#666' }}>Loading order data…</p></div>;
+
+  // --- Submit Review Function ---
+  const submitReview = async () => {
+    if (!rating || submitting) return;
+    setSubmitting(true);
+    try {
+      await axios.post(`/orders/${id}/reviews`, { rating, comment });
+      setReviewStatus('success');
+      await fetchOrder();
+    } catch (err) {
+      setReviewStatus(err.response?.data?.message || 'Failed to submit review.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div style={styles.center}><p>Loading order data…</p></div>;
   if (error && !order) return (
     <div style={styles.center}>
-      <p style={{ color: 'red', marginBottom: '16px', fontWeight: '600' }}>{error}</p>
+      <p style={{ color: 'red', marginBottom: '16px', fontWeight: 'bold' }}>{error}</p>
       <button onClick={() => navigate('/orders')} style={styles.btn}>← Back to My Orders</button>
     </div>
   );
+
   const statusColor = STATUS_COLORS[order.status] || 'gray';
-  // Find only the legal next moves for the dropdown
-  const availableNextStates = VALID_TRANSITIONS[order.status] ||[];
-  // Timeline mapping using OrderStatusHistories
-  const historyStatuses = order.OrderStatusHistories?.map(h => h.status) ||[];
-// Calculate how far along the main timeline we are (Ignore CANCELLED for the visual tracker)
-  const TIMELINE_STAGES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED'];
-  const currentStageIndex = TIMELINE_STAGES.indexOf(order.status);
-  const isCancelled = order.status === 'CANCELLED';
 
   return (
     <div style={styles.page}>
-      {/* Back navigation */}
-      <button onClick={() => navigate('/orders')} style={styles.back}>
-        ← My Orders
-      </button>
-      {/* ── Status header ── */}
+      <button onClick={() => navigate('/orders')} style={styles.back}>← My Orders</button>
+
       <div style={{ ...styles.card, borderTop: `4px solid ${statusColor}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h2 style={{ margin: '0 0 4px' }}>Order #{order.id}</h2>
             <p style={styles.meta}>{order.Restaurant?.name || 'Restaurant'}</p>
           </div>
-          <span style={{ ...styles.badge, background: statusColor }}>
-            {order.status}
-          </span>
+          <span style={{ ...styles.badge, background: statusColor }}>{order.status}</span>
         </div>
-        <p style={{ ...styles.meta, marginTop: '10px' }}>
-          Auto-refreshing every 10 seconds
-          {error && <span style={{ color: 'orange', marginLeft: '8px' }}>({error})</span>}
-        </p>
+        <p style={{ ...styles.meta, marginTop: '10px' }}>Auto-refreshing every 10 seconds</p>
       </div>
-      {/* THE TIMELINE UI */}
-      <div style={{ ...styles.card, marginTop: '16px' }}>
-        <h3 style={{ margin: '0 0 16px' }}>Live Tracking</h3>
-        {isCancelled ? (
-          <div style={{ padding: '15px', background: '#ffe6e6', color: '#c62828', borderRadius: '8px', fontWeight: 'bold' }}>
-            🚫 This order was cancelled.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {TIMELINE_STAGES.map((stage, index) => {
-              // It is completed if it's in history OR it's before the current index
-              const isCompleted = historyStatuses.includes(stage) || index < currentStageIndex;
-              const isActive = stage === order.status;
-              return (
-                <div key={stage} style={{ display: 'flex', alignItems: 'center', gap: '15px', opacity: isCompleted || isActive ? 1 : 0.4 }}>
-                  <div style={{ 
-                    width: '20px', height: '20px', borderRadius: '50%', 
-                    background: isActive ? 'orange' : (isCompleted ? 'green' : 'gray'),
-                    boxShadow: isActive ? '0 0 8px orange' : 'none'
-                  }}></div>
-                  <h4 style={{ margin: 0 }}>
-                    {stage.replace(/_/g, ' ')} {isCompleted && !isActive && '✅'} {isActive && '⏳'}
-                  </h4>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      {/* ── Receipt breakdown ── */}
+
       <div style={{ ...styles.card, marginTop: '16px' }}>
         <h3 style={{ margin: '0 0 16px' }}>Receipt breakdown</h3>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -154,63 +123,86 @@ const OrderConfirmation = () => {
             </li>
           ))}
         </ul>
-        <div style={{ ...styles.lineItem, fontWeight: '700', fontSize: '16px', marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '12px' }}>
+        <div style={{ ...styles.lineItem, fontWeight: 'bold', fontSize: '16px', marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '12px' }}>
           <span>Total (incl. delivery)</span>
           <span>${parseFloat(order.total_price).toFixed(2)}</span>
         </div>
-        <p style={{ ...styles.meta, marginTop: '10px' }}>
-          Delivering to: {order.delivery_address}
-        </p>
       </div>
 
-      {/* ── Admin / driver simulator ── */}
+      {/* ─── REVIEW SECTION (Only for Customers when order is COMPLETED) ─── */}
+      {!isPrivileged && order.status === 'COMPLETED' && (
+        <div style={{ ...styles.card, marginTop: '16px', background: '#f8fdf8', border: '1px solid #b7eb8f' }}>
+          <h3 style={{ margin: '0 0 10px 0', color: '#237804' }}>How was your food?</h3>
+          {reviewStatus ? (
+            <p style={{
+              color:      reviewStatus === 'success' ? 'green' : 'red',
+              fontWeight: 'bold',
+              margin:     '0',
+            }}>
+              {reviewStatus === 'success' ? 'Review submitted! Thank you.' : reviewStatus}
+            </p>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <span 
+                    key={star} 
+                    onClick={() => setRating(star)} 
+                    style={{ fontSize: '28px', cursor: 'pointer', color: star <= rating ? '#FFD700' : '#ddd' }}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+              <textarea 
+                placeholder="Leave a comment (optional)..." 
+                value={comment} 
+                onChange={e => setComment(e.target.value)} 
+                style={styles.textarea}
+              />
+              <button
+                onClick={submitReview}
+                disabled={submitting}
+                style={{ ...styles.btnPrimary, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+              >
+                {submitting ? 'Submitting…' : 'Submit Review'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── ADMIN SIMULATOR ─── */}
       {isPrivileged && (
         <div style={{ ...styles.card, marginTop: '16px', background: '#fff8f0', border: '1px solid #f0d0a0' }}>
           <h4 style={{ margin: '0 0 8px' }}>Admin — advance status</h4>
-          
-          {availableNextStates.length === 0 ? (
-            <p style={{ color: 'gray', fontSize: '14px', margin: 0 }}>No further actions available for this order.</p>
-          ) : (
-            <>
-              <p style={styles.meta}>Backend will reject illegal transitions.</p>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                {/* SMART DROPDOWN (Only shows legal moves!) */}
-                <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={styles.select}>
-                  <option value="">Select next status…</option>
-                  {availableNextStates.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleUpdateStatus}
-                  disabled={!newStatus || updating}
-                  style={{
-                    ...styles.btnPrimary,
-                    opacity: (!newStatus || updating) ? 0.5 : 1,
-                    cursor:  (!newStatus || updating) ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {updating ? 'Updating…' : 'Update'}
-                </button>
-              </div>
-            </>
-          )}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={styles.select}>
+              <option value="">Select next status…</option>
+              {ALL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={handleUpdateStatus} disabled={!newStatus || updating} style={{ ...styles.btnPrimary, opacity: (!newStatus || updating) ? 0.5 : 1 }}>
+              {updating ? 'Updating…' : 'Update'}
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 };
-// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = {
   page: { padding: '24px 20px', fontFamily: 'Arial, sans-serif', maxWidth: '640px', margin: '0 auto' },
-  center: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '40vh', fontFamily: 'Arial, sans-serif', padding: '40px 20px' },
-  card: { background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '20px 24px' },
-  back: { background: 'none', border: '1px solid #ccc', padding: '6px 12px', cursor: 'pointer', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' },
-  badge: { padding: '6px 16px', borderRadius: '20px', color: '#fff', fontWeight: '700', fontSize: '13px', whiteSpace: 'nowrap' },
+  center: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '40vh', padding: '40px 20px' },
+  card: { background: '#fff', border: '1px solid #e8e8e8', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
+  back: { background: '#f5f5f5', border: 'none', padding: '8px 16px', cursor: 'pointer', borderRadius: '6px', marginBottom: '16px', fontWeight: 'bold' },
+  badge: { padding: '6px 16px', borderRadius: '20px', color: '#fff', fontWeight: 'bold', fontSize: '13px' },
   meta: { margin: 0, color: '#888', fontSize: '13px' },
   lineItem: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0', fontSize: '15px' },
-  select: { flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px' },
-  btn: { padding: '8px 16px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', fontSize: '14px' },
-  btnPrimary: { padding: '8px 18px', background: '#111', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '14px' },
+  select: { flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px' },
+  textarea: { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', minHeight: '80px', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'Arial' },
+  btn: { padding: '8px 16px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: '#fff' },
+  btnPrimary: { padding: '10px 20px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
 };
+
 export default OrderConfirmation;
