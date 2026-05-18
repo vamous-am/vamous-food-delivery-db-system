@@ -25,6 +25,7 @@ const Register = () => {
         role: response.data.user.role
       }));
 
+      window.dispatchEvent(new Event('auth-change'));
       navigate('/restaurants');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
