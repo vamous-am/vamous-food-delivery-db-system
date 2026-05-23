@@ -19,9 +19,17 @@ const Cart = () => {
   const fetchCart = async () => {
     try {
       const response = await axios.get('/cart');
-      setCartItems(response.data.data);
+      // Backend shape: { status, message, data: { results, data: [...items] } }
+      // Array lives at response.data.data.data
+      const payload = response.data?.data;
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : [];
+      setCartItems(items);
     } catch (err) {
-      setError('Failed to load cart');
+      setError(err.response?.data?.message || 'Failed to load cart');
     } finally {
       setLoading(false);
     }

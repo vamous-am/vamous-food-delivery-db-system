@@ -1,20 +1,21 @@
 const { CartItem, MenuItem, Restaurant, sequelize } = require('../models');
+const { successResponse, errorResponse } = require('../utils/response');
 
 // 1. GET /api/cart
-exports.getCart = async (req, res) => {
+exports.getCart = async (req, res, next) => {
   try {
     const cartItems = await CartItem.findAll({
       where: { user_id: req.user.id },
       include: [{ model: MenuItem, attributes: ['id', 'name', 'price', 'restaurant_id'] }]
     });
-    res.status(200).json({ status: 'success', results: cartItems.length, data: cartItems });
+    return successResponse(res, { results: cartItems.length, data: cartItems }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 
 // 2. POST /api/cart
-exports.addToCart = async (req, res) => {
+exports.addItem = async (req, res, next) => {
   const t = await sequelize.transaction();
 
   try {
@@ -98,7 +99,7 @@ exports.addToCart = async (req, res) => {
     }
 
     await t.commit();
-    res.status(200).json({ status: 'success', data: cartItem });
+    return successResponse(res, cartItem, 'Item added to cart', 200);
 
   } catch (error) {
     await t.rollback();
@@ -107,40 +108,47 @@ exports.addToCart = async (req, res) => {
     const statusCode = error.statusCode || 500;
     const message = statusCode === 500 ? 'Internal server error' : error.message;
 
-    if (statusCode === 500) console.error('DB Error:', error);
+    if (statusCode === 500) {
+      return next(error);
+    }
 
-    res.status(statusCode).json({ status: 'fail', message });
+    return errorResponse(res, message, statusCode);
   }
 };
 
 // 3. PATCH /api/cart/:id
-exports.updateCartItem = async (req, res) => {
+exports.updateItem = async (req, res, next) => {
   try {
     const { quantity } = req.body;
 
     if (quantity === undefined || quantity <= 0 || quantity > 100) {
-      return res.status(400).json({ status: 'fail', message: 'Quantity must be between 1 and 100' });
+      return errorResponse(res, 'Quantity must be between 1 and 100', 400);
     }
 
     const cartItem = await CartItem.findOne({ where: { id: req.params.id, user_id: req.user.id } });
-    if (!cartItem) return res.status(404).json({ status: 'fail', message: 'Cart item not found' });
+    if (!cartItem) return errorResponse(res, 'Cart item not found', 404);
 
     cartItem.quantity = quantity;
     await cartItem.save();
 
-    res.status(200).json({ status: 'success', data: cartItem });
+    return successResponse(res, cartItem, 'Cart item updated', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 
 // 4. DELETE /api/cart/:id
-exports.removeFromCart = async (req, res) => {
+exports.removeItem = async (req, res, next) => {
   try {
     const deletedCount = await CartItem.destroy({ where: { id: req.params.id, user_id: req.user.id } });
-    if (deletedCount === 0) return res.status(404).json({ status: 'fail', message: 'Cart item not found' });
+    if (deletedCount === 0) return errorResponse(res, 'Cart item not found', 404);
+    
+    // Status 204 has no body, but we can just use send() or successResponse without body
+    // If you want standard format, use 200. I'll stick to 204 with empty send() as before, or successResponse.
+    // The user had res.status(204).send(). I'll leave it as res.status(204).send(); or return successResponse(res, null, 'Deleted', 200);
+    // Actually, stick to res.status(204).send(); for 204 since JSON is mostly ignored.
     res.status(204).send();
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };

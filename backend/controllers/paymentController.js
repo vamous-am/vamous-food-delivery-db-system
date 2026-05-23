@@ -1,12 +1,13 @@
 const { Order, Payment, OrderStatusHistory, sequelize } = require('../models');
+const { successResponse, errorResponse } = require('../utils/response');
 
 // 1. POST /api/payments/create-intent
-exports.createPaymentIntent = async (req, res) => {
+exports.createPaymentIntent = async (req, res, next) => {
   try {
     const { order_id } = req.body;
 
     if (!order_id || isNaN(order_id)) {
-      return res.status(400).json({ status: 'fail', message: 'Invalid or missing order_id' });
+      return errorResponse(res, 'Invalid or missing order_id', 400);
     }
 
     // Verify order exists, belongs to user, and is PENDING
@@ -15,7 +16,7 @@ exports.createPaymentIntent = async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({ status: 'fail', message: 'Valid pending order not found' });
+      return errorResponse(res, 'Valid pending order not found', 404);
     }
 
     // Verify no payment is currently processing or already completed
@@ -27,7 +28,7 @@ exports.createPaymentIntent = async (req, res) => {
     });
 
     if (activePayment) {
-      return res.status(400).json({ status: 'fail', message: 'A payment is already pending or completed for this order' });
+      return errorResponse(res, 'A payment is already pending or completed for this order', 400);
     }
 
     // Create a new pending payment
@@ -38,18 +39,17 @@ exports.createPaymentIntent = async (req, res) => {
       payment_method: 'simulated'
     });
 
-    res.status(200).json({
-      status: 'success',
+    return successResponse(res, {
       clientSecret: 'mock_secret_for_demo_purposes_only',
       payment_id: payment.id
-    });
+    }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 
 // 2. POST /api/payments/simulate/:orderId
-exports.simulatePayment = async (req, res) => {
+exports.simulatePayment = async (req, res, next) => {
   const t = await sequelize.transaction();
 
   try {
@@ -65,18 +65,18 @@ exports.simulatePayment = async (req, res) => {
 
     if (!order) {
       await t.rollback();
-      return res.status(404).json({ status: 'fail', message: 'Order not found or not yours' });
+      return errorResponse(res, 'Order not found or not yours', 404);
     }
 
     // Idempotency: If Stripe hits us twice but it's already confirmed, just smile and return success
     if (order.status === 'CONFIRMED') {
       await t.rollback();
-      return res.status(200).json({ status: 'success', message: 'Order is already confirmed' });
+      return successResponse(res, null, 'Order is already confirmed', 200);
     }
 
     if (order.status !== 'PENDING') {
       await t.rollback();
-      return res.status(400).json({ status: 'fail', message: `Cannot pay for order in ${order.status} state` });
+      return errorResponse(res, `Cannot pay for order in ${order.status} state`, 400);
     }
 
     // DB ROW LOCK on the Payment row
@@ -88,15 +88,14 @@ exports.simulatePayment = async (req, res) => {
 
     if (!payment) {
       await t.rollback();
-      return res.status(400).json({ status: 'fail', message: 'No pending payment found. Create intent first.' });
+      return errorResponse(res, 'No pending payment found. Create intent first.', 400);
     }
 
-    // Handle a failed credit card charge
     if (status === 'failed') {
       payment.status = 'failed';
       await payment.save({ transaction: t });
       await t.commit();
-      return res.status(400).json({ status: 'fail', message: 'Payment failed. Please try again.' });
+      return errorResponse(res, 'Payment failed. Please try again.', 400);
     }
 
     // Handle a successful charge
@@ -112,9 +111,9 @@ exports.simulatePayment = async (req, res) => {
     }, { transaction: t });
 
     await t.commit();
-    res.status(200).json({ status: 'success', message: 'Payment successful, order CONFIRMED', order });
+    return successResponse(res, { order }, 'Payment successful, order CONFIRMED', 200);
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };

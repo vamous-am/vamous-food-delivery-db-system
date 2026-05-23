@@ -15,16 +15,23 @@ const Login = () => {
     setError('');
 
     try {
+      // 1. Correct URL path (axios instance already handles /api)
       const response = await axios.post('/auth/login', { email, password });
 
-      localStorage.setItem('token', response.data.token);
+      // 2. Unwrap the new Phase 0.5 standardized envelope
+      const responseData = response.data?.data;
+
+      // 3. Store the token and user
+      localStorage.setItem('token', responseData?.token);
       localStorage.setItem('user', JSON.stringify({
-        id: response.data.user.id,
-        name: response.data.user.name,
-        role: response.data.user.role
+        id: responseData?.user?.id || responseData?.id,
+        name: responseData?.user?.name || responseData?.name,
+        role: responseData?.user?.role || responseData?.role,
       }));
 
+      // 4. Trigger the custom event to instantly update the header!
       window.dispatchEvent(new Event('auth-change'));
+
       navigate('/restaurants');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');

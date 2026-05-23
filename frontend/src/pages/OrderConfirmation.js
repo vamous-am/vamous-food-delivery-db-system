@@ -35,7 +35,11 @@ const OrderConfirmation = () => {
   const fetchOrder = async () => {
     try {
       const response = await axios.get(`/orders/${id}`);
-      setOrder(response.data.data);
+      // Backend shape: { status, message, data: { data: orderObj } }
+      // Order lives at response.data.data.data
+      const payload = response.data?.data;
+      const orderObj = payload?.data || payload || null;
+      setOrder(orderObj);
       setError(''); 
     } catch (err) {
       const status = err.response?.status;

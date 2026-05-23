@@ -1,12 +1,13 @@
 const { Order, Restaurant, Driver } = require('../models');
+const { successResponse, errorResponse } = require('../utils/response');
 
 // GET /api/drivers/available-orders
-exports.getAvailableOrders = async (req, res) => {
+exports.getAvailableOrders = async (req, res, next) => {
   try {
     // 1. Ensure the user is actually an active driver
     const driver = await Driver.findOne({ where: { user_id: req.user.id } });
     if (!driver || !driver.is_active) {
-      return res.status(403).json({ status: 'fail', message: 'You are not an active driver' });
+      return errorResponse(res, 'You are not an active driver', 403);
     }
 
     // 2. Fetch all orders sitting in the 'READY' state that NO ONE has claimed yet
@@ -21,9 +22,9 @@ exports.getAvailableOrders = async (req, res) => {
       order: [['createdAt', 'ASC']] // Oldest orders first
     });
 
-    res.status(200).json({ status: 'success', results: availableOrders.length, data: availableOrders });
+    return successResponse(res, { results: availableOrders.length, data: availableOrders }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 

@@ -1,8 +1,9 @@
 const { Restaurant, MenuItem } = require('../models');
 const { Op } = require('sequelize');
+const { successResponse, errorResponse } = require('../utils/response');
 
 // 1. GET /api/restaurants
-exports.getRestaurants = async (req, res) => {
+exports.getRestaurants = async (req, res, next) => {
   try {
     const { name, cuisine } = req.query;
 
@@ -35,46 +36,43 @@ exports.getRestaurants = async (req, res) => {
     const page = Math.floor(offset / limit) + 1;
     const totalPages = Math.ceil(count / limit);
 
-    res.status(200).json({
-      status: 'success',
+    return successResponse(res, {
       results: rows.length,
       total: count,
       page,
       totalPages,
       data: rows
-    });
+    }, 'Success', 200);
   } catch (error) {
-    console.error('getRestaurants Error:', error);
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
 
 // 2. GET /api/restaurants/:id
-exports.getRestaurantById = async (req, res) => {
+exports.getRestaurantById = async (req, res, next) => {
   try {
-    if (isNaN(req.params.id)) return res.status(400).json({ status: 'fail', message: 'Invalid ID format' });
+    if (isNaN(req.params.id)) return errorResponse(res, 'Invalid ID format', 400);
 
     const restaurant = await Restaurant.findOne({
       where: { id: req.params.id, is_active: true }
     });
 
-    if (!restaurant) return res.status(404).json({ status: 'fail', message: 'Restaurant not found' });
+    if (!restaurant) return errorResponse(res, 'Restaurant not found', 404);
 
-    res.status(200).json({ status: 'success', data: restaurant });
+    return successResponse(res, { data: restaurant }, 'Success', 200);
   } catch (error) {
-    console.error('getRestaurantById Error:', error);
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
 
 // 3. GET /api/restaurants/:id/menu
-exports.getRestaurantMenu = async (req, res) => {
+exports.getMenu = async (req, res, next) => {
   try {
-    if (isNaN(req.params.id)) return res.status(400).json({ status: 'fail', message: 'Invalid ID format' });
+    if (isNaN(req.params.id)) return errorResponse(res, 'Invalid ID format', 400);
 
     const restaurant = await Restaurant.findByPk(req.params.id);
     if (!restaurant || !restaurant.is_active) {
-      return res.status(404).json({ status: 'fail', message: 'Restaurant not found' });
+      return errorResponse(res, 'Restaurant not found', 404);
     }
 
     const menu = await MenuItem.findAll({
@@ -82,31 +80,54 @@ exports.getRestaurantMenu = async (req, res) => {
       order: [['id', 'ASC']] // Keep menu item order consistent
     });
 
-    res.status(200).json({
-      status: 'success',
+    return successResponse(res, {
       results: menu.length,
       data: menu
-    });
+    }, 'Success', 200);
   } catch (error) {
-    console.error('getRestaurantMenu Error:', error);
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
 
 // 4. GET /api/menu-items/:id
-exports.getMenuItemById = async (req, res) => {
+exports.getMenuItemById = async (req, res, next) => {
   try {
-    if (isNaN(req.params.id)) return res.status(400).json({ status: 'fail', message: 'Invalid ID format' });
+    if (isNaN(req.params.id)) return errorResponse(res, 'Invalid ID format', 400);
 
     const menuItem = await MenuItem.findOne({
       where: { id: req.params.id, is_available: true }
     });
 
-    if (!menuItem) return res.status(404).json({ status: 'fail', message: 'Menu item not found' });
+    if (!menuItem) return errorResponse(res, 'Menu item not found', 404);
 
-    res.status(200).json({ status: 'success', data: menuItem });
+    return successResponse(res, { data: menuItem }, 'Success', 200);
   } catch (error) {
-    console.error('getMenuItemById Error:', error);
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
+
+// --- STUBS FOR OWNER MENU MANAGEMENT ---
+exports.addMenuItem = async (req, res, next) => {
+  try {
+    return errorResponse(res, 'Not implemented yet', 501);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.updateMenuItem = async (req, res, next) => {
+  try {
+    return errorResponse(res, 'Not implemented yet', 501);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.softDeleteMenuItem = async (req, res, next) => {
+  try {
+    return errorResponse(res, 'Not implemented yet', 501);
+  } catch (error) {
+    return next(error);
+  }
+};
+

@@ -32,9 +32,15 @@ const AdminDashboard = () => {
         axios.get('/orders?limit=50&offset=0'),
         axios.get('/orders/admin/stats')
       ]);
-      
-      setOrders(ordersRes.data.data);
-      setStats(statsRes.data.data);
+
+      const ordersPayload = ordersRes.data?.data;
+      const ordersArray = Array.isArray(ordersPayload) ? ordersPayload : (ordersPayload?.orders || ordersPayload || []);
+
+      const statsPayload = statsRes.data?.data;
+      const statsObj = statsPayload || statsRes.data?.stats || statsRes.data || { activeOrders: 0, todaysRevenue: 0 };
+
+      setOrders(ordersArray);
+      setStats(statsObj);
       setError('');
     } catch (err) {
       setError('Connection lost. Could not sync with server.');

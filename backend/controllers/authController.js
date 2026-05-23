@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const { successResponse, errorResponse } = require('../utils/response');
 // Helper function: Generate Token with strong payload
 const signToken = (user) => {
   return jwt.sign(
@@ -10,26 +11,26 @@ const signToken = (user) => {
   );
 };
 // 1. POST /api/auth/register
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
     // SECURITY: We do NOT extract 'role'. Users cannot make themselves admins.
     const { name, email, password } = req.body;
     // VALIDATION 1: Check for missing fields
     if (!name || !email || !password) {
-      return res.status(400).json({ status: 'fail', message: 'Name, email, and password are required' });
+      return errorResponse(res, 'Name, email, and password are required', 400);
     }
     // VALIDATION 2: Check email format
     if (!email.includes('@')) {
-      return res.status(400).json({ status: 'fail', message: 'Invalid email format' });
+      return errorResponse(res, 'Invalid email format', 400);
     }
     // VALIDATION 3: Check password strength
     if (password.length < 6) {
-      return res.status(400).json({ status: 'fail', message: 'Password must be at least 6 characters' });
+      return errorResponse(res, 'Password must be at least 6 characters', 400);
     }
     // VALIDATION 4: Prevent duplicate emails
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ status: 'fail', message: 'Email already in use' });
+      return errorResponse(res, 'Email already in use', 400);
     }
     // Hash password & Create user
     const salt = await bcrypt.genSalt(10);
@@ -42,52 +43,50 @@ exports.register = async (req, res) => {
     });
     const token = signToken(newUser);
     // Standardized Success Response
-    res.status(201).json({
-      status: 'success',
+    return successResponse(res, {
       token,
       user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role }
-    });
+    }, 'User registered successfully', 201);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 // 2. POST /api/auth/login
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     // VALIDATION: Check for missing fields
     if (!email || !password) {
-      return res.status(400).json({ status: 'fail', message: 'Email and password are required' });
+      return errorResponse(res, 'Email and password are required', 400);
     }
     // Check if user exists
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(401).json({ status: 'fail', message: 'Invalid email or password' });
+      return errorResponse(res, 'Invalid email or password', 401);
     }
     // Check if password matches
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ status: 'fail', message: 'Invalid email or password' });
+      return errorResponse(res, 'Invalid email or password', 401);
     }
     const token = signToken(user);
     // Standardized Success Response
-    res.status(200).json({
-      status: 'success',
+    return successResponse(res, {
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
-    });
+    }, 'Login successful', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 // 3. GET /api/auth/me
-exports.getMe = async (req, res) => {
+exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] } // SECURITY: Never send back the hash
     });
-    res.status(200).json({ status: 'success', user });
+    return successResponse(res, { user }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };

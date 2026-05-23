@@ -1,10 +1,10 @@
-// backend/controllers/orderController.js
 const { Order, OrderItem, OrderStatusHistory, CartItem, MenuItem, Restaurant, Driver, sequelize } = require('../models');
 const { canTransition } = require('../services/orderStateMachine');
 const { Op } = require('sequelize');
+const { successResponse, errorResponse } = require('../utils/response');
 
 // GET /api/orders/admin/stats
-exports.getAdminStats = async (req, res) => {
+exports.getAdminStats = async (req, res, next) => {
   try {
     // Count only active orders
     const activeOrders = await Order.count({
@@ -22,14 +22,14 @@ exports.getAdminStats = async (req, res) => {
       }
     });
 
-    res.status(200).json({ status: 'success', data: { activeOrders, todaysRevenue: revenue || 0 } });
+    return successResponse(res, { activeOrders, todaysRevenue: revenue || 0 }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 
 // 1. POST /api/orders
-exports.createOrder = async (req, res) => {
+exports.createOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { delivery_address } = req.body;
@@ -59,15 +59,15 @@ exports.createOrder = async (req, res) => {
     await CartItem.destroy({ where: { user_id }, transaction: t });
 
     await t.commit();
-    res.status(201).json({ status: 'success', data: order });
+    return successResponse(res, order, 'Order created successfully', 201);
   } catch (error) {
     await t.rollback();
-    res.status(400).json({ status: 'fail', message: error.message || 'Internal Server Error' });
+    return next(error);
   }
 };
 
 // 2. GET /api/orders
-exports.getUserOrders = async (req, res) => {
+exports.getUserOrders = async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 10, 50); 
     const offset = Math.max(parseInt(req.query.offset) || 0, 0);
@@ -89,17 +89,17 @@ exports.getUserOrders = async (req, res) => {
       limit, offset
     });
 
-    res.status(200).json({ status: 'success', total: count, limit, offset, data: rows });
+    return successResponse(res, { total: count, limit, offset, data: rows }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
 
 // 3. GET /api/orders/:id
-exports.getOrderById = async (req, res) => {
+exports.getOrderById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    if (!id || isNaN(id)) return res.status(400).json({ status: 'fail', message: 'Invalid order ID format' });
+    if (!id || isNaN(id)) return errorResponse(res, 'Invalid order ID format', 400);
 
     let whereClause = { id };
     if (req.user.role === 'customer') {
@@ -120,37 +120,37 @@ exports.getOrderById = async (req, res) => {
       ]
     });
 
-    if (!order) return res.status(404).json({ status: 'fail', message: 'Order not found or access denied' });
-    res.status(200).json({ status: 'success', data: order });
+    if (!order) return errorResponse(res, 'Order not found or access denied', 404);
+    return successResponse(res, { data: order }, 'Success', 200);
   } catch (error) {
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
 
 // 4. PUT /api/orders/:id/status
-exports.updateOrderStatus = async (req, res) => {
+exports.updateOrderStatus = async (req, res, next) => {
   const { id } = req.params;
   let { status } = req.body; 
 
-  if (!id || isNaN(id)) return res.status(400).json({ status: 'fail', message: 'Invalid order ID format', data: null });
-  if (!status) return res.status(400).json({ status: 'fail', message: 'New status is required' });
+  if (!id || isNaN(id)) return errorResponse(res, 'Invalid order ID format', 400);
+  if (!status) return errorResponse(res, 'New status is required', 400);
 
   status = status.toUpperCase(); 
   const t = await sequelize.transaction();
 
   try {
     const order = await Order.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
-    if (!order) { await t.rollback(); return res.status(404).json({ status: 'fail', message: 'Order not found' }); }
+    if (!order) { await t.rollback(); return errorResponse(res, 'Order not found', 404); }
 
     if (req.user.role === 'driver') {
       const driverProfile = await Driver.findOne({ where: { user_id: req.user.id }, transaction: t });
       if (!driverProfile || order.driver_id !== driverProfile.id) {
-        await t.rollback(); return res.status(403).json({ status: 'fail', message: 'Access denied: You are not assigned to this order' });
+        await t.rollback(); return errorResponse(res, 'Access denied: You are not assigned to this order', 403);
       }
     }
 
     if (!canTransition(order.status, status)) {
-      await t.rollback(); return res.status(400).json({ status: 'fail', message: `Invalid transition! Cannot move order from ${order.status} to ${status}.` });
+      await t.rollback(); return errorResponse(res, `Invalid transition! Cannot move order from ${order.status} to ${status}.`, 400);
     }
 
     order.status = status;
@@ -158,31 +158,31 @@ exports.updateOrderStatus = async (req, res) => {
     await OrderStatusHistory.create({ order_id: order.id, status: status }, { transaction: t });
 
     await t.commit();
-    res.status(200).json({ status: 'success', message: `Order status updated to ${status}`, data: order });
+    return successResponse(res, order, `Order status updated to ${status}`, 200);
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 
 // 5. PUT /api/orders/:id/assign-driver
-exports.assignDriver = async (req, res) => {
+exports.assignDriver = async (req, res, next) => {
   const { id } = req.params;
-  if (!id || isNaN(id)) return res.status(400).json({ status: 'fail', message: 'Invalid order ID format', data: null });
+  if (!id || isNaN(id)) return errorResponse(res, 'Invalid order ID format', 400);
 
   const t = await sequelize.transaction();
   try {
     const driver = await Driver.findOne({ where: { user_id: req.user.id }, transaction: t, lock: t.LOCK.UPDATE });
-    if (!driver || !driver.is_active) { await t.rollback(); return res.status(403).json({ status: 'fail', message: 'Active driver profile not found' }); }
+    if (!driver || !driver.is_active) { await t.rollback(); return errorResponse(res, 'Active driver profile not found', 403); }
 
     const activeOrder = await Order.findOne({ where: { driver_id: driver.id, status: 'OUT_FOR_DELIVERY' }, transaction: t });
-    if (activeOrder) { await t.rollback(); return res.status(400).json({ status: 'fail', message: 'You already have an active delivery. Finish it first!' }); }
+    if (activeOrder) { await t.rollback(); return errorResponse(res, 'You already have an active delivery. Finish it first!', 400); }
 
     const order = await Order.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
-    if (!order) { await t.rollback(); return res.status(404).json({ status: 'fail', message: 'Order not found' }); }
+    if (!order) { await t.rollback(); return errorResponse(res, 'Order not found', 404); }
 
-    if (order.status !== 'READY') { await t.rollback(); return res.status(400).json({ status: 'fail', message: `Order is ${order.status}, not READY for pickup.` }); }
-    if (order.driver_id !== null) { await t.rollback(); return res.status(400).json({ status: 'fail', message: 'Order has already been assigned to another driver.' }); }
+    if (order.status !== 'READY') { await t.rollback(); return errorResponse(res, `Order is ${order.status}, not READY for pickup.`, 400); }
+    if (order.driver_id !== null) { await t.rollback(); return errorResponse(res, 'Order has already been assigned to another driver.', 400); }
 
     order.driver_id = driver.id;
     order.status = 'OUT_FOR_DELIVERY'; 
@@ -193,36 +193,36 @@ exports.assignDriver = async (req, res) => {
     await OrderStatusHistory.create({ order_id: order.id, status: 'OUT_FOR_DELIVERY' }, { transaction: t });
 
     await t.commit();
-    res.status(200).json({ status: 'success', message: 'Order assigned successfully', data: order });
+    return successResponse(res, order, 'Order assigned successfully', 200);
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };
 
 // 6. PUT /api/orders/:id/complete-delivery
-exports.completeDelivery = async (req, res) => {
+exports.completeDelivery = async (req, res, next) => {
   const { id } = req.params;
-  if (!id || isNaN(id)) return res.status(400).json({ status: 'fail', message: 'Invalid order ID format', data: null });
+  if (!id || isNaN(id)) return errorResponse(res, 'Invalid order ID format', 400);
 
   const t = await sequelize.transaction();
   try {
     const driver = await Driver.findOne({ where: { user_id: req.user.id }, transaction: t, lock: t.LOCK.UPDATE });
-    if (!driver || !driver.is_active) { await t.rollback(); return res.status(403).json({ status: 'fail', message: 'Active driver profile not found' }); }
+    if (!driver || !driver.is_active) { await t.rollback(); return errorResponse(res, 'Active driver profile not found', 403); }
 
     const order = await Order.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
-    if (!order) { await t.rollback(); return res.status(404).json({ status: 'fail', message: 'Order not found' }); }
-    if (order.driver_id !== driver.id) { await t.rollback(); return res.status(403).json({ status: 'fail', message: 'You are not assigned to this order' }); }
-    if (order.status !== 'OUT_FOR_DELIVERY') { await t.rollback(); return res.status(400).json({ status: 'fail', message: `Cannot complete delivery. Order is currently: ${order.status}` }); }
+    if (!order) { await t.rollback(); return errorResponse(res, 'Order not found', 404); }
+    if (order.driver_id !== driver.id) { await t.rollback(); return errorResponse(res, 'You are not assigned to this order', 403); }
+    if (order.status !== 'OUT_FOR_DELIVERY') { await t.rollback(); return errorResponse(res, `Cannot complete delivery. Order is currently: ${order.status}`, 400); }
     order.status = 'COMPLETED';
     await order.save({ transaction: t });
     driver.is_available = true;
     await driver.save({ transaction: t });
     await OrderStatusHistory.create({ order_id: order.id, status: 'COMPLETED' }, { transaction: t });
     await t.commit();
-    res.status(200).json({ status: 'success', message: 'Delivery completed successfully!', data: order });
+    return successResponse(res, order, 'Delivery completed successfully!', 200);
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ status: 'fail', message: error.message });
+    next(error);
   }
 };

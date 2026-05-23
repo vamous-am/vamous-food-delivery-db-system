@@ -1,16 +1,14 @@
 const { Review, Order, sequelize } = require('../models');
+const { successResponse, errorResponse } = require('../utils/response');
 
 // POST /api/orders/:id/reviews
-exports.addReview = async (req, res) => {
+exports.addReview = async (req, res, next) => {
   try {
     const { rating, comment } = req.body;
     const orderId = parseInt(req.params.id, 10);
 
     if (!rating || !Number.isInteger(Number(rating)) || rating < 1 || rating > 5) {
-      return res.status(400).json({
-        status:  'fail',
-        message: 'Rating must be an integer between 1 and 5',
-      });
+      return errorResponse(res, 'Rating must be an integer between 1 and 5', 400);
     }
 
     const order = await Order.findOne({
@@ -18,25 +16,16 @@ exports.addReview = async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({
-        status:  'fail',
-        message: 'Order not found or access denied',
-      });
+      return errorResponse(res, 'Order not found or access denied', 404);
     }
 
     const VALID_STATUSES = ['PENDING','CONFIRMED','PREPARING','READY','OUT_FOR_DELIVERY','COMPLETED','CANCELLED'];
     if (!VALID_STATUSES.includes(order.status)) {
-      return res.status(500).json({
-        status:  'fail',
-        message: 'Order is in an invalid state. Contact support.',
-      });
+      return errorResponse(res, 'Order is in an invalid state. Contact support.', 500);
     }
 
     if (order.status !== 'COMPLETED') {
-      return res.status(400).json({
-        status:  'fail',
-        message: 'You can only review COMPLETED orders',
-      });
+      return errorResponse(res, 'You can only review COMPLETED orders', 400);
     }
 
     const review = await sequelize.transaction(async (t) => {
@@ -47,28 +36,21 @@ exports.addReview = async (req, res) => {
       }, { transaction: t });
     });
 
-    return res.status(201).json({ status: 'success', data: review });
+    return successResponse(res, { data: review }, 'Success', 201);
 
   } catch (error) {
     if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({
-        status:  'fail',
-        message: 'You have already reviewed this order',
-      });
+      return errorResponse(res, 'You have already reviewed this order', 400);
     }
     if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({
-        status:  'fail',
-        message: error.errors.map(e => e.message).join(', '),
-      });
+      return errorResponse(res, error.errors.map(e => e.message).join(', '), 400);
     }
-    console.error('[addReview]', error);
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };
 
 // GET /api/restaurants/:id/reviews
-exports.getRestaurantReviews = async (req, res) => {
+exports.getRestaurantReviews = async (req, res, next) => {
   try {
     const restaurantId = parseInt(req.params.id, 10);
 
@@ -101,17 +83,15 @@ exports.getRestaurantReviews = async (req, res) => {
       userId:    r.Order?.user_id ?? null,
     }));
 
-    return res.status(200).json({
-      status: 'success',
+    return successResponse(res, {
       stats: {
         totalReviews:  parseInt(stats?.total_reviews, 10) || 0,
         averageRating: parseFloat(stats?.avg_rating)      || 0,
       },
       data: reviewData,
-    });
+    }, 'Success', 200);
 
   } catch (error) {
-    console.error('[getRestaurantReviews]', error);
-    res.status(500).json({ status: 'fail', message: 'Internal server error' });
+    next(error);
   }
 };

@@ -11,9 +11,22 @@ const RestaurantList = () => {
     const fetchRestaurants = async () => {
       try {
         const response = await axios.get('/restaurants');
-        setRestaurants(response.data.data);
+
+        const payload = response.data?.data;
+
+        // Normalize to an array no matter the backend shape
+        // Backend returns: { status, message, data: { results, total, page, totalPages, data: [...] } }
+        // So the array lives at response.data.data.data (payload.data)
+        let restaurantsArray = [];
+        if (Array.isArray(payload)) restaurantsArray = payload;
+        else if (Array.isArray(payload?.data)) restaurantsArray = payload.data;
+        else if (Array.isArray(payload?.restaurants)) restaurantsArray = payload.restaurants;
+        else if (Array.isArray(payload?.items)) restaurantsArray = payload.items;
+        else restaurantsArray = [];
+
+        setRestaurants(restaurantsArray);
       } catch (err) {
-        setError('Failed to load restaurants');
+        setError(err.response?.data?.message || 'Failed to load restaurants');
       }
     };
     fetchRestaurants();

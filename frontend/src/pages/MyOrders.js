@@ -24,10 +24,21 @@ const MyOrders = () => {
     setError('');
     try {
       const response = await axios.get(`/orders?limit=${PAGE_LIMIT}&offset=${offset}`);
-      setOrders(response.data.data);
-      setTotal(response.data.total);
+
+      // Backend shape: { status, message, data: { total, limit, offset, data: [...orders] } }
+      // Array lives at response.data.data.data
+      const payload = response.data?.data;
+      const ordersArray = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : [];
+
+      setOrders(ordersArray);
+      setTotal(payload?.total ?? response.data?.total ?? 0);
     } catch (err) {
-      setError('Could not load your orders. Check your connection and try again.');
+      // Keep error user-friendly; log can be added centrally if needed
+      setError(err.response?.data?.message || 'Could not load your orders. Check your connection and try again.');
     } finally {
       setLoading(false);
     }

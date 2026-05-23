@@ -20,10 +20,28 @@ const Menu = () => {
           axios.get(`/restaurants/${id}/menu`),
           axios.get(`/restaurants/${id}/reviews`)
         ]);
-        
-        setMenuItems(menuRes.data.data);
-        setReviews(reviewsRes.data.data);
-        setStats(reviewsRes.data.stats);
+
+        // Backend shape: { status, message, data: { results, data: [...items] } }
+        // So the array lives at menuRes.data.data.data
+        const menuPayload = menuRes.data?.data;
+        const menuArray = Array.isArray(menuPayload)
+          ? menuPayload
+          : Array.isArray(menuPayload?.data)
+            ? menuPayload.data
+            : [];
+
+        // Backend shape: { status, message, data: { stats: {...}, data: [...reviews] } }
+        // So the array lives at reviewsRes.data.data.data
+        const reviewsPayload = reviewsRes.data?.data;
+        const reviewsArray = Array.isArray(reviewsPayload)
+          ? reviewsPayload
+          : Array.isArray(reviewsPayload?.data)
+            ? reviewsPayload.data
+            : [];
+
+        setMenuItems(menuArray);
+        setReviews(reviewsArray);
+        setStats(reviewsRes.data?.data?.stats ?? reviewsRes.data?.stats ?? { averageRating: 0, totalReviews: 0 });
       } catch (err) {
         setError('Failed to load restaurant data.');
       }
