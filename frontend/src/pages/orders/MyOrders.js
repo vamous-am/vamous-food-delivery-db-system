@@ -1,4 +1,4 @@
-// frontend/src/pages/orders/MyOrders.js
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
@@ -42,7 +42,7 @@ const MyOrders = () => {
   const hasPrev = offset > 0;
   const hasNext = offset + PAGE_LIMIT < total;
 
-  if (loading) return <div style={styles.center}><p style={{ color: '#666' }}>Loading your orders…</p></div>;
+  if (loading) return <LoadingSpinner message="Loading your orders…" />;
 
   if (error) return (
     <div style={styles.center}>

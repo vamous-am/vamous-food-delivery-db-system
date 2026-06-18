@@ -108,7 +108,9 @@ exports.uploadRestaurantImage = async (req, res, next) => {
 // ══════════════════════════════════════════════════════════════════════════════
 // POST /api/upload/menu-item
 // Uploads a menu item image.
-// Requires: multipart/form-data with field name 'image' + body field 'menu_item_id'
+// Requires: multipart/form-data with field name 'image'
+// Optional body field 'menu_item_id' — if provided, ownership is verified.
+// If omitted (new item not yet created), the upload proceeds as a staged image.
 // Access: restaurant_owner or admin
 // ══════════════════════════════════════════════════════════════════════════════
 exports.uploadMenuItemImage = async (req, res, next) => {
@@ -117,14 +119,12 @@ exports.uploadMenuItemImage = async (req, res, next) => {
       return errorResponse(res, 'No image file provided', 400);
     }
 
-    // Ownership check — owner can only upload for their own menu items
     const { menu_item_id } = req.body;
-    if (!menu_item_id) {
-      return errorResponse(res, 'menu_item_id is required', 400);
-    }
 
-    // Admins skip ownership check
-    if (req.user.role !== 'admin') {
+    // If menu_item_id is provided, verify ownership (editing an existing item).
+    // If not provided, the owner is uploading for a new item not yet created —
+    // skip ownership check since the item doesn't exist yet.
+    if (menu_item_id && req.user.role !== 'admin') {
       const owns = await verifyMenuItemOwnership(menu_item_id, req.user.id);
       if (!owns) {
         return errorResponse(res, 'You can only upload images for your own menu items', 403);
@@ -134,7 +134,7 @@ exports.uploadMenuItemImage = async (req, res, next) => {
     const result = await uploadToCloudinary(req.file.buffer, 'saporivivi/menu-items');
 
     logger.info(
-      { publicId: result.public_id, userId: req.user.id, menuItemId: menu_item_id },
+      { publicId: result.public_id, userId: req.user.id, menuItemId: menu_item_id || 'new' },
       'Menu item image uploaded to Cloudinary'
     );
 

@@ -158,7 +158,7 @@ exports.getUserOrders = async (req, res) => {
       whereClause.user_id = req.user.id;
     } else if (req.user.role === 'driver') {
       const driverProfile = await Driver.findOne({ where: { user_id: req.user.id } });
-      whereClause.driver_id = driverProfile ? driverProfile.id : null; 
+      whereClause.driver_id = driverProfile ? driverProfile.user_id : null;
     } else if (req.user.role === 'restaurant_owner') {
       const ownerRestaurant = await Restaurant.findOne({ where: { owner_id: req.user.id } });
       whereClause.restaurant_id = ownerRestaurant ? ownerRestaurant.id : null;
@@ -187,7 +187,7 @@ exports.getOrderById = async (req, res) => {
       whereClause.user_id = req.user.id;
     } else if (req.user.role === 'driver') {
       const driverProfile = await Driver.findOne({ where: { user_id: req.user.id } });
-      whereClause.driver_id = driverProfile ? driverProfile.id : null; 
+      whereClause.driver_id = driverProfile ? driverProfile.user_id : null;
     } else if (req.user.role === 'restaurant_owner') {
       const ownerRestaurant = await Restaurant.findOne({ where: { owner_id: req.user.id } });
       whereClause.restaurant_id = ownerRestaurant ? ownerRestaurant.id : null;

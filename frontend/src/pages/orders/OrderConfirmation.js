@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
 import { useAuth } from '../../hooks/useAuth';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const STATUS_COLORS = {
   PENDING: 'orange', CONFIRMED: 'blue', PREPARING: 'purple',
@@ -86,7 +87,7 @@ const OrderConfirmation = () => {
     }
   };
 
-  if (loading) return <div style={styles.center}><p>Loading order data…</p></div>;
+  if (loading) return <LoadingSpinner message="Loading order data…" />;
   if (error && !order) return (
     <div style={styles.center}>
       <p style={{ color: 'red', marginBottom: '16px', fontWeight: 'bold' }}>{error}</p>
