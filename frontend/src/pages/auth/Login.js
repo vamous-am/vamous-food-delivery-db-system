@@ -9,10 +9,11 @@ import axios from '../../api/axios';
 import { useAuth } from '../../hooks/useAuth';
 
 const Login = () => {
-  const [email,     setEmail]     = useState('');
-  const [password,  setPassword]  = useState('');
-  const [error,     setError]     = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [email,       setEmail]       = useState('');
+  const [password,    setPassword]    = useState('');
+  const [showPass,    setShowPass]    = useState(false);
+  const [error,       setError]       = useState('');
+  const [isLoading,   setIsLoading]   = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -25,13 +26,12 @@ const Login = () => {
       const response = await axios.post('/auth/login', { email, password });
 
       // Token is in the httpOnly cookie set by the server — store user via context
+      const userRole = response.data.user.role;
       login({
         id:   response.data.user.id,
         name: response.data.user.name,
-        role: response.data.user.role,
+        role: userRole,
       });
-
-      navigate('/restaurants');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
@@ -68,17 +68,27 @@ const Login = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200
-                text-sm text-gray-900 placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-brand-300/50 focus:border-brand-300
-                transition-all duration-200"
-            />
+            <div className="relative">
+              <input
+                type={showPass ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 pr-11 rounded-xl border border-gray-200
+                  text-sm text-gray-900 placeholder-gray-400
+                  focus:outline-none focus:ring-2 focus:ring-brand-300/50 focus:border-brand-300
+                  transition-all duration-200"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(v => !v)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-300 hover:text-gray-500 transition-colors"
+                aria-label={showPass ? 'Hide password' : 'Show password'}
+              >
+                {showPass ? '🙈' : '👁'}
+              </button>
+            </div>
           </div>
           <button
             type="submit"

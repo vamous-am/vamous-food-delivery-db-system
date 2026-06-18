@@ -28,8 +28,9 @@ const mobileNavLinkClass = ({ isActive }) => [
 ].join(' ');
 
 const Header = () => {
-  const [scrolled,   setScrolled]   = useState(false);
-  const [menuOpen,   setMenuOpen]   = useState(false);
+  const [scrolled,     setScrolled]     = useState(false);
+  const [menuOpen,     setMenuOpen]     = useState(false);
+  const [searchQuery,  setSearchQuery]  = useState('');
   const { isAuthenticated: isLoggedIn, user, logout } = useAuth();
   const userRole = user?.role || '';
   const navigate = useNavigate();
@@ -45,11 +46,28 @@ const Header = () => {
     navigate('/login');
   };
 
-  const navLinks = [
-    { label: 'Browse restaurants', to: '/restaurants' },
-    { label: 'Add your restaurant', to: '/add-restaurant' },
-    { label: 'Sign up to deliver',  to: '/deliver' },
-  ];
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      navigate(`/restaurants?search=${encodeURIComponent(q)}`);
+      setSearchQuery('');
+      setMenuOpen(false);
+    }
+  };
+
+  const navLinks = [];
+  if (userRole === 'admin') {
+    navLinks.push({ label: 'Admin Dashboard', to: '/admin' });
+    navLinks.push({ label: 'Customer View', to: '/restaurants' });
+  } else if (userRole === 'restaurant_owner') {
+    navLinks.push({ label: 'Owner Dashboard', to: '/owner/dashboard' });
+    navLinks.push({ label: 'Customer View', to: '/restaurants' });
+  } else {
+    navLinks.push({ label: 'Browse restaurants', to: '/restaurants' });
+    navLinks.push({ label: 'Add your restaurant', to: '/add-restaurant' });
+    navLinks.push({ label: 'Sign up to deliver',  to: '/deliver' });
+  }
 
   return (
     <header
@@ -82,28 +100,59 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Desktop auth */}
+          {/* Desktop search — visible only when logged in */}
+          {isLoggedIn && (
+            <form onSubmit={handleSearch} className="hidden md:flex items-center">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search restaurants…"
+                  className="w-48 lg:w-64 px-4 py-1.5 pr-9 rounded-full border border-gray-200
+                    text-sm text-gray-900 placeholder-gray-400 bg-gray-50
+                    focus:outline-none focus:ring-2 focus:ring-brand-300/50 focus:border-brand-300
+                    focus:bg-white transition-all duration-200"
+                />
+                <button
+                  type="submit"
+                  className="absolute inset-y-0 right-2.5 flex items-center text-gray-400 hover:text-brand-500 transition-colors"
+                  aria-label="Search"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          )}
+
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
               <>
-                {userRole === 'admin' && (
-                  <NavLink to="/admin" className={navLinkClass}>Admin Dashboard</NavLink>
+                {userRole !== 'admin' && userRole !== 'restaurant_owner' && (
+                  <>
+                    <NavLink to="/orders" className={navLinkClass}>My orders</NavLink>
+                    <NavLink
+                      to="/restaurants"
+                      className={({ isActive }) => [
+                        'px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 shadow-sm',
+                        isActive
+                          ? 'bg-brand-400 text-white'
+                          : 'bg-brand-300 text-white hover:bg-brand-400 active:bg-brand-500',
+                      ].join(' ')}
+                    >
+                      Order now
+                    </NavLink>
+                  </>
                 )}
-                {userRole === 'restaurant_owner' && (
-                  <NavLink to="/owner/dashboard" className={navLinkClass}>My Restaurant</NavLink>
-                )}
-                <NavLink to="/orders" className={navLinkClass}>My orders</NavLink>
-                <NavLink
-                  to="/restaurants"
-                  className={({ isActive }) => [
-                    'px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 shadow-sm',
-                    isActive
-                      ? 'bg-brand-400 text-white'
-                      : 'bg-brand-300 text-white hover:bg-brand-400 active:bg-brand-500',
-                  ].join(' ')}
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-2 rounded-full text-sm font-medium transition-colors duration-200
+                    bg-gray-200 text-grey hover:bg-gray-500 active:bg-gray-700"
                 >
-                  Order now
-                </NavLink>
+                  Logout
+                </button>
               </>
             ) : (
               <>
@@ -162,38 +211,22 @@ const Header = () => {
           <div className="border-t border-gray-100 mt-2 pt-3 flex flex-col gap-1">
             {isLoggedIn ? (
               <>
-                {userRole === 'admin' && (
-                  <NavLink
-                    to="/admin"
-                    onClick={() => setMenuOpen(false)}
-                    className={mobileNavLinkClass}
-                  >
-                    Admin Dashboard
-                  </NavLink>
-                )}
-                {userRole === 'restaurant_owner' && (
-                  <NavLink
-                    to="/owner/dashboard"
-                    onClick={() => setMenuOpen(false)}
-                    className={mobileNavLinkClass}
-                  >
-                    My Restaurant
-                  </NavLink>
-                )}
                 <div className="flex gap-3 mt-1">
-                  <NavLink
-                    to="/orders"
-                    onClick={() => setMenuOpen(false)}
-                    className={({ isActive }) => [
-                      'flex-1 text-center py-2 rounded-full text-sm font-medium',
-                      'border border-brand-300 transition-colors duration-150',
-                      isActive
-                        ? 'bg-brand-50 text-brand-600 border-brand-400'
-                        : 'text-brand-500 hover:bg-brand-50',
-                    ].join(' ')}
-                  >
-                    My orders
-                  </NavLink>
+                  {userRole !== 'admin' && userRole !== 'restaurant_owner' && (
+                    <NavLink
+                      to="/orders"
+                      onClick={() => setMenuOpen(false)}
+                      className={({ isActive }) => [
+                        'flex-1 text-center py-2 rounded-full text-sm font-medium',
+                        'border border-brand-300 transition-colors duration-150',
+                        isActive
+                          ? 'bg-brand-50 text-brand-600 border-brand-400'
+                          : 'text-brand-500 hover:bg-brand-50',
+                      ].join(' ')}
+                    >
+                      My orders
+                    </NavLink>
+                  )}
                   <button
                     onClick={() => { setMenuOpen(false); handleLogout(); }}
                     className="flex-1 text-center py-2 rounded-full text-sm font-medium

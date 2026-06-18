@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const AddressBook = () => {
   const navigate = useNavigate();
@@ -134,11 +135,7 @@ const AddressBook = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500">Loading addresses...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading addresses…" />;
   }
 
   return (

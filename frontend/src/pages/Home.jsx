@@ -1,8 +1,9 @@
 // frontend/src/pages/Home.jsx
 
 import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import Header from '../components/Header';
+import { useAuth } from '../hooks/useAuth';
 
 // ─── Unsplash hero image (food / city delivery aesthetic) ──────────────────
 const HERO_IMAGE =
@@ -58,9 +59,17 @@ function useFadeUp(threshold = 0.15) {
 }
 
 const Home = () => {
+  const { isAuthenticated, user } = useAuth();
   const howRef = useFadeUp();
   const whyRef = useFadeUp();
   const ctaRef = useFadeUp();
+
+  // Redirect authenticated users to their workspace — no need to see marketing hero
+  if (isAuthenticated) {
+    if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user?.role === 'restaurant_owner') return <Navigate to="/owner/dashboard" replace />;
+    return <Navigate to="/restaurants" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-white font-body">
@@ -84,15 +93,15 @@ const Home = () => {
             alt="Delicious food spread"
             className="w-full h-full object-cover"
           />
-          {/* Gradient overlay — left side darker for text legibility */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-950/80 via-gray-900/60 to-gray-900/20" />
+          {/* Gradient overlay — balanced for centered text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950/85 via-gray-950/70 to-gray-950/85" />
           {/* Subtle brand-color tint at bottom */}
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-brand-300/20 to-transparent" />
         </div>
 
         {/* Hero content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="max-w-2xl">
+          <div className="max-w-5xl mx-auto text-center">
 
             {/* Eyebrow label */}
             <div className="
@@ -108,19 +117,17 @@ const Home = () => {
 
             {/* Main headline */}
             <h1 className="
-              font-display text-5xl sm:text-6xl lg:text-7xl font-bold
+              font-display text-4xl sm:text-6xl lg:text-7xl font-bold
               text-white leading-[1.05] tracking-tight
               animate-fade-up
             ">
-              Taste the city,
-              <br />
-              <span className="text-brand-300">without leaving</span>
-              <br />
+              Taste the city, <br className="sm:hidden" />
+              <span className="text-brand-300">without leaving</span> <br className="sm:hidden" />
               your couch.
             </h1>
 
             <p className="
-              mt-6 text-lg text-gray-300 leading-relaxed max-w-lg
+              mt-6 text-lg text-gray-300 leading-relaxed max-w-xl mx-auto
               animate-fade-up delay-200 opacity-0-init
             ">
               SaporiVivi connects you with the best local restaurants — fast delivery,
@@ -129,7 +136,7 @@ const Home = () => {
 
             {/* CTA buttons */}
             <div className="
-              mt-8 flex flex-col sm:flex-row gap-3
+              mt-8 flex flex-col sm:flex-row gap-3 justify-center
               animate-fade-up delay-300 opacity-0-init
             ">
               <Link
@@ -166,7 +173,7 @@ const Home = () => {
 
             {/* Social proof strip */}
             <div className="
-              mt-10 flex items-center gap-4
+              mt-10 flex items-center justify-center gap-4
               animate-fade-up delay-400 opacity-0-init
             ">
               {/* Avatar stack */}

@@ -1,7 +1,7 @@
 // frontend/src/pages/restaurants/RestaurantList.js
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../../api/axios';
 
 // Shown when image_url is null or the image fails to load
@@ -84,12 +84,19 @@ const RestaurantList = () => {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
 
   useEffect(() => {
     const fetchRestaurants = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get('/restaurants');
+        const url = searchQuery
+          ? `/restaurants?name=${encodeURIComponent(searchQuery)}`
+          : '/restaurants';
+        const response = await axios.get(url);
         setRestaurants(response.data.data || []);
+        setError('');
       } catch {
         setError('Could not load restaurants. Please try again.');
       } finally {
@@ -97,7 +104,7 @@ const RestaurantList = () => {
       }
     };
     fetchRestaurants();
-  }, []);
+  }, [searchQuery]); // re-fetches whenever the search param changes
 
   if (loading) {
     return (
@@ -111,10 +118,22 @@ const RestaurantList = () => {
     <div className="min-h-screen bg-gray-50 font-body">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-gray-900">Restaurants near you</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {restaurants.length} restaurant{restaurants.length !== 1 ? 's' : ''} available
-          </p>
+          <h1 className="font-display text-3xl font-bold text-gray-900">
+            {searchQuery ? `Results for "${searchQuery}"` : 'Restaurants near you'}
+          </h1>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-gray-400 text-sm">
+              {restaurants.length} restaurant{restaurants.length !== 1 ? 's' : ''} {searchQuery ? 'found' : 'available'}
+            </p>
+            {searchQuery && (
+              <button
+                onClick={() => navigate('/restaurants')}
+                className="text-xs text-brand-500 hover:text-brand-600 hover:underline transition-colors"
+              >
+                Clear search ×
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -125,7 +144,19 @@ const RestaurantList = () => {
 
         {!error && restaurants.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400 text-lg">No restaurants available right now.</p>
+            <p className="text-gray-400 text-lg">
+              {searchQuery
+                ? `No restaurants found for "${searchQuery}".`
+                : 'No restaurants available right now.'}
+            </p>
+            {searchQuery && (
+              <button
+                onClick={() => navigate('/restaurants')}
+                className="mt-4 text-sm text-brand-500 hover:text-brand-600 hover:underline"
+              >
+                Browse all restaurants
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

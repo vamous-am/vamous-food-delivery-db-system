@@ -90,7 +90,7 @@ exports.confirmTransfer = async (req, res, next) => {
     }
 
     await payment.update(
-      { status: 'completed', paid_at: new Date(), transaction_id: req.body.transaction_reference ?? null },
+      { status: 'completed', paid_at: new Date(), transaction_id: req.body?.transaction_reference ?? null },
       { transaction: t }
     );
     await order.update({ status: 'PAID' }, { transaction: t });

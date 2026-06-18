@@ -12,6 +12,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate }  from 'react-router-dom';
 import axios            from '../../api/axios';
 import ImageUpload      from '../../components/common/ImageUpload';
+import LoadingSpinner   from '../../components/common/LoadingSpinner';
 import { useAuth }      from '../../hooks/useAuth';
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -57,6 +58,18 @@ const OwnerDashboard = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [itemForm,    setItemForm]    = useState({});
   const [itemSaving,  setItemSaving]  = useState(false);
+
+  // Add new item form
+  const [categories,      setCategories]      = useState([]);
+  const [showNewItemForm, setShowNewItemForm] = useState(false);
+  const [newItemForm,     setNewItemForm]     = useState({
+    item_name: '', description: '', price: '', category_id: '', is_available: true, image_url: '',
+  });
+  const [newItemSaving, setNewItemSaving] = useState(false);
+
+  // Add new category
+  const [newCategoryName,   setNewCategoryName]   = useState('');
+  const [categoryCreating,  setCategoryCreating]  = useState(false);
 
   // ── Toast helper ───────────────────────────────────────────────────────────
   const showToast = (msg) => {
@@ -117,6 +130,15 @@ const OwnerDashboard = () => {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
+  // Fetch categories when Menu tab is opened (needed for "Add New Item" selector)
+  useEffect(() => {
+    if (tab === TABS.MENU && categories.length === 0) {
+      axios.get('/menu-items/categories/mine')
+        .then((res) => setCategories(res.data.data || []))
+        .catch(() => {});
+    }
+  }, [tab, categories.length]);
+
   // ── Restaurant update ──────────────────────────────────────────────────────
   const handleRestSave = async () => {
     setRestSaving(true);
@@ -164,6 +186,34 @@ const OwnerDashboard = () => {
     }
   };
 
+  // ── Create new menu item ───────────────────────────────────────────────────
+  const handleCreateItem = async () => {
+    if (!newItemForm.item_name.trim()) { showToast('Item name is required.'); return; }
+    if (!newItemForm.price || Number(newItemForm.price) <= 0) { showToast('Price must be a positive number.'); return; }
+    if (!newItemForm.category_id) { showToast('Please select a category.'); return; }
+
+    setNewItemSaving(true);
+    try {
+      const res = await axios.post('/menu-items', {
+        item_name:    newItemForm.item_name.trim(),
+        description:  newItemForm.description.trim() || undefined,
+        price:        Number(newItemForm.price),
+        category_id:  Number(newItemForm.category_id),
+        is_available: newItemForm.is_available,
+        image_url:    newItemForm.image_url || undefined,
+      });
+      // Prepend to menu list so it appears immediately
+      setMenu((prev) => [res.data.data, ...prev]);
+      setNewItemForm({ item_name: '', description: '', price: '', category_id: '', is_available: true, image_url: '' });
+      setShowNewItemForm(false);
+      showToast('Menu item added successfully.');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to create item.');
+    } finally {
+      setNewItemSaving(false);
+    }
+  };
+
   // ── Order status advancement ───────────────────────────────────────────────
   const handleAdvanceStatus = async (orderId, nextStatus) => {
     try {
@@ -178,11 +228,7 @@ const OwnerDashboard = () => {
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div style={s.centered}>
-      <p style={{ color: '#6b7280' }}>Loading your dashboard…</p>
-    </div>
-  );
+  if (loading) return <LoadingSpinner message="Loading your dashboard…" />;
 
   if (error) return (
     <div style={s.centered}>
@@ -201,15 +247,23 @@ const OwnerDashboard = () => {
           <p style={s.headerSub}>Owner Portal</p>
           <h2 style={s.headerTitle}>{restaurant.name}</h2>
         </div>
-        <button
-          onClick={async () => {
-            await logout();
-            navigate('/login');
-          }}
-          style={s.btnDanger}
-        >
-          Logout
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => navigate('/restaurants')}
+            style={{ ...s.btnSecondary, padding: '8px 16px' }}
+          >
+            Home
+          </button>
+          <button
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+            style={s.btnDanger}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Toast */}
@@ -275,7 +329,113 @@ const OwnerDashboard = () => {
       {/* ══ TAB: MENU ════════════════════════════════════════════════════════ */}
       {tab === TABS.MENU && (
         <div style={s.section}>
-          {menu.length === 0 && (
+
+          {/* ── Add New Item button / form ── */}
+          {!showNewItemForm ? (
+            <button
+              onClick={() => setShowNewItemForm(true)}
+              style={{ ...s.btnPrimary, alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              + Add New Item
+            </button>
+          ) : (
+            <div style={{ ...s.card, flexDirection: 'column' }}>
+              <strong style={{ fontSize: '15px', marginBottom: '12px' }}>New Menu Item</strong>
+              <div style={s.formGrid}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Item name *</label>
+                  <input
+                    style={s.input}
+                    placeholder="e.g. Injera with Tibs"
+                    value={newItemForm.item_name}
+                    onChange={(e) => setNewItemForm(f => ({ ...f, item_name: e.target.value }))}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Price (ETB) *</label>
+                  <input
+                    style={s.input}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={newItemForm.price}
+                    onChange={(e) => setNewItemForm(f => ({ ...f, price: e.target.value }))}
+                  />
+                </div>
+                <div style={{ ...s.formGroup, gridColumn: '1 / -1' }}>
+                  <label style={s.label}>Description</label>
+                  <textarea
+                    style={{ ...s.input, minHeight: '72px', resize: 'vertical' }}
+                    placeholder="Short description (optional)"
+                    value={newItemForm.description}
+                    onChange={(e) => setNewItemForm(f => ({ ...f, description: e.target.value }))}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Category *</label>
+                  <select
+                    style={s.input}
+                    value={newItemForm.category_id}
+                    onChange={(e) => setNewItemForm(f => ({ ...f, category_id: e.target.value }))}
+                  >
+                    <option value="">Select category…</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.category_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Availability</label>
+                  <select
+                    style={s.input}
+                    value={newItemForm.is_available ? 'true' : 'false'}
+                    onChange={(e) => setNewItemForm(f => ({ ...f, is_available: e.target.value === 'true' }))}
+                  >
+                    <option value="true">Available</option>
+                    <option value="false">Unavailable</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Image upload for new item — captures URL before POST */}
+              <div style={{ marginTop: '16px' }}>
+                <ImageUpload
+                  endpoint="/upload/menu-item"
+                  extraFields={{}}
+                  currentUrl={newItemForm.image_url}
+                  onSuccess={(url) => setNewItemForm(f => ({ ...f, image_url: url }))}
+                  label="Item photo (optional)"
+                  aspectHint="Square or 4:3 ratio works best"
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                <button
+                  onClick={handleCreateItem}
+                  disabled={newItemSaving || categories.length === 0}
+                  style={{ ...s.btnPrimary, opacity: (newItemSaving || categories.length === 0) ? 0.5 : 1, cursor: (newItemSaving || categories.length === 0) ? 'not-allowed' : 'pointer' }}
+                >
+                  {newItemSaving ? 'Adding…' : 'Add item'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNewItemForm(false);
+                    setNewItemForm({ item_name: '', description: '', price: '', category_id: '', is_available: true, image_url: '' });
+                  }}
+                  style={s.btnSecondary}
+                >
+                  Cancel
+                </button>
+              </div>
+              {categories.length === 0 && (
+                <p style={{ marginTop: '12px', fontSize: '13px', color: '#b45309', background: '#fef9c3', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                  ⚠️ No categories found. Please contact an admin to create categories for your restaurant first.
+                </p>
+              )}
+            </div>
+          )}
+          {menu.length === 0 && !showNewItemForm && (
             <p style={s.empty}>No menu items found.</p>
           )}
           {menu.map((item) => (

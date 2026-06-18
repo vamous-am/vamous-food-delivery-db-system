@@ -30,19 +30,19 @@ async function seed() {
     const hash = (pw) => bcrypt.hashSync(pw, SALT_ROUNDS);
     const [customer, owner, driver, admin] = await User.bulkCreate([
       { email: 'customer@test.com', password_hash: hash('password123'), full_name: 'Ahmed Customer', phone: '+251911000001', role: 'customer' },
-      { email: 'owner@test.com',    password_hash: hash('password123'), full_name: 'Marta Owner',    phone: '+251911000002', role: 'restaurant_owner' },
-      { email: 'driver@test.com',   password_hash: hash('password123'), full_name: 'Dawit Driver',   phone: '+251911000003', role: 'driver' },
-      { email: 'admin@test.com',    password_hash: hash('password123'), full_name: 'Amanuel Admin',  phone: '+251911000004', role: 'admin' },
+      { email: 'owner@test.com', password_hash: hash('password123'), full_name: 'Marta Owner', phone: '+251911000002', role: 'restaurant_owner' },
+      { email: 'driver@test.com', password_hash: hash('password123'), full_name: 'Dawit Driver', phone: '+251911000003', role: 'driver' },
+      { email: 'admin@test.com', password_hash: hash('password123'), full_name: 'Amanuel Admin', phone: '+251911000004', role: 'admin' },
     ]);
     console.log(`   ✅ ${await User.count()} users`);
 
     // ── 2. DRIVERS ────────────────────────────────────────────────────────
     console.log('🌱 Seeding drivers...');
     await Driver.create({
-      user_id:        driver.id,
+      user_id: driver.id,
       license_number: 'ET-DL-2024-001',
-      vehicle_type:   'motorcycle',
-      is_available:   true,
+      vehicle_type: 'motorcycle',
+      is_available: true,
     });
     console.log(`   ✅ ${await Driver.count()} drivers`);
 
@@ -59,26 +59,26 @@ async function seed() {
     console.log('🌱 Seeding restaurants...');
     const [rest1, rest2] = await Restaurant.bulkCreate([
       {
-        owner_id:       owner.id,
-        name:           'Habesha Kitchen',
-        description:    'Authentic Ethiopian cuisine in the heart of Addis',
-        address:        'Bole, Addis Ababa',
-        phone:          '+251112345678',
-        delivery_fee:   30.00,
+        owner_id: owner.id,
+        name: 'Habesha Kitchen',
+        description: 'Authentic Ethiopian cuisine in the heart of Addis',
+        address: 'Bole, Addis Ababa',
+        phone: '+251912345678',
+        delivery_fee: 30.00,
         estimated_time: 35,
-        is_active:      true,
-        // Replace with your own after running: POST /api/upload/restaurant
-        image_url: 'https://res.cloudinary.com/demo/image/upload/w_1200,q_auto,f_auto/food_restaurant',
+        is_active: true,
+        image_url: 'https://res.cloudinary.com/ds6pmxirq/image/upload/q_auto/f_auto/v1781349867/images_g4v0bn.jpg',
       },
       {
-        owner_id:       owner.id,
-        name:           'Campus Burger',
-        description:    'Fast food for busy students',
-        address:        'AAU Main Campus, Addis Ababa',
-        phone:          '+251119876543',
-        delivery_fee:   20.00,
+        owner_id: owner.id,
+        name: 'Campus Burger',
+        description: 'Fast food for busy students',
+        address: 'AAU Main Campus, Addis Ababa',
+        phone: '+251919876543',
+        delivery_fee: 20.00,
         estimated_time: 20,
-        is_active:      true,
+        is_active: true,
+        image_url: 'https://res.cloudinary.com/ds6pmxirq/image/upload/q_auto/f_auto/v1781352051/campus_oca9rd.png',
       },
     ]);
     console.log(`   ✅ ${await Restaurant.count()} restaurants`);
@@ -95,8 +95,8 @@ async function seed() {
     // ── 6. OPERATING_HOURS ────────────────────────────────────────────────
     console.log('🌱 Seeding operating hours...');
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const weekend  = ['Saturday', 'Sunday'];
-    const hours    = [];
+    const weekend = ['Saturday', 'Sunday'];
+    const hours = [];
 
     for (const day of weekdays) {
       hours.push(
@@ -117,9 +117,9 @@ async function seed() {
     console.log('🌱 Seeding menu categories...');
     const [mainDishes, drinks, burgers, sides] = await MenuCategory.bulkCreate([
       { restaurant_id: rest1.id, category_name: 'Main Dishes', display_order: 1 },
-      { restaurant_id: rest1.id, category_name: 'Drinks',      display_order: 2 },
-      { restaurant_id: rest2.id, category_name: 'Burgers',     display_order: 1 },
-      { restaurant_id: rest2.id, category_name: 'Sides',       display_order: 2 },
+      { restaurant_id: rest1.id, category_name: 'Drinks', display_order: 2 },
+      { restaurant_id: rest2.id, category_name: 'Burgers', display_order: 1 },
+      { restaurant_id: rest2.id, category_name: 'Sides', display_order: 2 },
     ]);
     console.log(`   ✅ ${await MenuCategory.count()} menu categories`);
 
@@ -127,13 +127,13 @@ async function seed() {
     console.log('🌱 Seeding menu items...');
     const [injera, , tej, , classic, , fries] = await MenuItem.bulkCreate([
       { restaurant_id: rest1.id, category_id: mainDishes.id, item_name: 'Injera with Tibs', description: 'Traditional injera with spiced beef', price: 120.00, is_available: true },
-      { restaurant_id: rest1.id, category_id: mainDishes.id, item_name: 'Doro Wot',         description: 'Ethiopian chicken stew',              price: 150.00, is_available: true },
-      { restaurant_id: rest1.id, category_id: drinks.id,     item_name: 'Tej',              description: 'Traditional honey wine',              price: 50.00,  is_available: true },
-      { restaurant_id: rest1.id, category_id: drinks.id,     item_name: 'Ethiopian Coffee', description: 'Fresh brewed Buna',                   price: 35.00,  is_available: true },
-      { restaurant_id: rest2.id, category_id: burgers.id,    item_name: 'Classic Burger',   description: 'Beef patty, lettuce, tomato',         price: 85.00,  is_available: true },
-      { restaurant_id: rest2.id, category_id: burgers.id,    item_name: 'Double Smash',     description: 'Double patty, special sauce',         price: 120.00, is_available: true },
-      { restaurant_id: rest2.id, category_id: sides.id,      item_name: 'Crispy Fries',     description: 'Seasoned french fries',               price: 40.00,  is_available: true },
-      { restaurant_id: rest2.id, category_id: sides.id,      item_name: 'Onion Rings',      description: 'Beer-battered onion rings',           price: 45.00,  is_available: true },
+      { restaurant_id: rest1.id, category_id: mainDishes.id, item_name: 'Doro Wot', description: 'Ethiopian chicken stew', price: 150.00, is_available: true },
+      { restaurant_id: rest1.id, category_id: drinks.id, item_name: 'Tej', description: 'Traditional honey wine', price: 50.00, is_available: true },
+      { restaurant_id: rest1.id, category_id: drinks.id, item_name: 'Ethiopian Coffee', description: 'Fresh brewed Buna', price: 35.00, is_available: true },
+      { restaurant_id: rest2.id, category_id: burgers.id, item_name: 'Classic Burger', description: 'Beef patty, lettuce, tomato', price: 85.00, is_available: true },
+      { restaurant_id: rest2.id, category_id: burgers.id, item_name: 'Double Smash', description: 'Double patty, special sauce', price: 120.00, is_available: true },
+      { restaurant_id: rest2.id, category_id: sides.id, item_name: 'Crispy Fries', description: 'Seasoned french fries', price: 40.00, is_available: true },
+      { restaurant_id: rest2.id, category_id: sides.id, item_name: 'Onion Rings', description: 'Beer-battered onion rings', price: 45.00, is_available: true },
     ]);
     console.log(`   ✅ ${await MenuItem.count()} menu items`);
 
@@ -151,23 +151,23 @@ async function seed() {
     console.log('🌱 Seeding addresses...');
     const [addr1] = await Address.bulkCreate([
       { user_id: customer.id, street: 'Bole Road, Building 12', city: 'Addis Ababa', postal_code: '1000', is_default: true },
-      { user_id: customer.id, street: 'AAU Dorm Block C',       city: 'Addis Ababa', postal_code: '1001', is_default: false },
+      { user_id: customer.id, street: 'AAU Dorm Block C', city: 'Addis Ababa', postal_code: '1001', is_default: false },
     ]);
     console.log(`   ✅ ${await Address.count()} addresses`);
 
     // ── 11. ORDERS ────────────────────────────────────────────────────────
     console.log('🌱 Seeding sample order (COD flow)...');
     const sampleOrder = await Order.create({
-      user_id:              customer.id,
-      restaurant_id:        rest2.id,
-      address_id:           addr1.id,
-      driver_id:            driver.id,
-      status:               'COMPLETED',
-      subtotal:             125.00,
-      tax:                  0.00,
-      delivery_fee:         20.00,
-      discount_amount:      0.00,
-      total_amount:         145.00,
+      user_id: customer.id,
+      restaurant_id: rest2.id,
+      address_id: addr1.id,
+      driver_id: driver.id,
+      status: 'COMPLETED',
+      subtotal: 125.00,
+      tax: 0.00,
+      delivery_fee: 20.00,
+      discount_amount: 0.00,
+      total_amount: 145.00,
       special_instructions: 'Please ring the bell twice',
     });
     console.log(`   ✅ ${await Order.count()} orders`);
@@ -176,7 +176,7 @@ async function seed() {
     console.log('🌱 Seeding order items...');
     await OrderItem.bulkCreate([
       { order_id: sampleOrder.id, line_no: 1, menu_item_id: classic.id, quantity: 1, unit_price: 85.00 },
-      { order_id: sampleOrder.id, line_no: 2, menu_item_id: fries.id,   quantity: 1, unit_price: 40.00 },
+      { order_id: sampleOrder.id, line_no: 2, menu_item_id: fries.id, quantity: 1, unit_price: 40.00 },
     ]);
     console.log(`   ✅ ${await OrderItem.count()} order items`);
 
@@ -184,25 +184,25 @@ async function seed() {
     console.log('🌱 Seeding order status history...');
     const now = new Date();
     await OrderStatusHistory.bulkCreate([
-      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 5), status_name: 'PENDING',          actor_user_id: customer.id, notes: 'Order placed' },
-      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 4), status_name: 'PAID',             actor_user_id: customer.id, notes: 'Cash on delivery' },
-      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 3), status_name: 'CONFIRMED',        actor_user_id: owner.id,    notes: 'Restaurant confirmed' },
-      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 2), status_name: 'PREPARING',        actor_user_id: owner.id,    notes: null },
-      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 1), status_name: 'READY',            actor_user_id: owner.id,    notes: 'Ready for pickup' },
-      { order_id: sampleOrder.id, updated_at: new Date(now - 1800000),     status_name: 'OUT_FOR_DELIVERY', actor_user_id: driver.id,   notes: 'Driver picked up' },
-      { order_id: sampleOrder.id, updated_at: now,                          status_name: 'COMPLETED',        actor_user_id: driver.id,   notes: 'Delivered to customer' },
+      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 5), status_name: 'PENDING', actor_user_id: customer.id, notes: 'Order placed' },
+      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 4), status_name: 'PAID', actor_user_id: customer.id, notes: 'Cash on delivery' },
+      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 3), status_name: 'CONFIRMED', actor_user_id: owner.id, notes: 'Restaurant confirmed' },
+      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 2), status_name: 'PREPARING', actor_user_id: owner.id, notes: null },
+      { order_id: sampleOrder.id, updated_at: new Date(now - 3600000 * 1), status_name: 'READY', actor_user_id: owner.id, notes: 'Ready for pickup' },
+      { order_id: sampleOrder.id, updated_at: new Date(now - 1800000), status_name: 'OUT_FOR_DELIVERY', actor_user_id: driver.id, notes: 'Driver picked up' },
+      { order_id: sampleOrder.id, updated_at: now, status_name: 'COMPLETED', actor_user_id: driver.id, notes: 'Delivered to customer' },
     ]);
     console.log(`   ✅ ${await OrderStatusHistory.count()} status history entries`);
 
     // ── 14. PAYMENTS ──────────────────────────────────────────────────────
     console.log('🌱 Seeding payments...');
     await Payment.create({
-      order_id:          sampleOrder.id,
+      order_id: sampleOrder.id,
       payment_method_id: cod.id,
-      amount:            145.00,
-      status:            'completed',
-      transaction_id:    'COD-DEMO-001',
-      paid_at:           now,
+      amount: 145.00,
+      status: 'completed',
+      transaction_id: 'COD-DEMO-001',
+      paid_at: now,
     });
     console.log(`   ✅ ${await Payment.count()} payments`);
 
@@ -210,8 +210,8 @@ async function seed() {
     console.log('🌱 Seeding reviews...');
     await Review.create({
       order_id: sampleOrder.id,
-      rating:   5,
-      comment:  'Excellent burgers! Fast delivery and still hot.',
+      rating: 5,
+      comment: 'Excellent burgers! Fast delivery and still hot.',
     });
     console.log(`   ✅ ${await Review.count()} reviews`);
 
@@ -219,7 +219,7 @@ async function seed() {
     console.log('🌱 Seeding cart items...');
     await CartItem.bulkCreate([
       { user_id: customer.id, menu_item_id: injera.id, quantity: 2 },
-      { user_id: customer.id, menu_item_id: tej.id,    quantity: 1 },
+      { user_id: customer.id, menu_item_id: tej.id, quantity: 1 },
     ]);
     console.log(`   ✅ ${await CartItem.count()} cart items`);
 

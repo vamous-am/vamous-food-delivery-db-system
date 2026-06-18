@@ -8,9 +8,19 @@ import { Navigate, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const AuthLayout = () => {
-  const { isAuthenticated } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  if (isAuthenticated) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (user) {
+    if (user.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    if (user.role === 'restaurant_owner') {
+      return <Navigate to="/owner/dashboard" replace />;
+    }
     return <Navigate to="/restaurants" replace />;
   }
 
