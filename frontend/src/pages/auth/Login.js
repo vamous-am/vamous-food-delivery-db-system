@@ -4,7 +4,7 @@
 // Token is in httpOnly cookie — only user object stored client-side.
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from '../../api/axios';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -14,7 +14,6 @@ const Login = () => {
   const [showPass,    setShowPass]    = useState(false);
   const [error,       setError]       = useState('');
   const [isLoading,   setIsLoading]   = useState(false);
-  const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleLogin = async (e) => {

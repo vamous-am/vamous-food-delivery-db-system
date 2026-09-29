@@ -5,7 +5,7 @@
 // that was left over from pre-cookie migration.
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from '../../api/axios';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -17,7 +17,6 @@ const Register = () => {
   const [phone,     setPhone]     = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleRegister = async (e) => {
