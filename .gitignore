@@ -4,3 +4,4 @@ logs/
 *.log
 .vscode/
 HANDOFF.md
+PR_REVIEW.md
