@@ -67,10 +67,6 @@ const OwnerDashboard = () => {
   });
   const [newItemSaving, setNewItemSaving] = useState(false);
 
-  // Add new category
-  const [newCategoryName,   setNewCategoryName]   = useState('');
-  const [categoryCreating,  setCategoryCreating]  = useState(false);
-
   // ── Toast helper ───────────────────────────────────────────────────────────
   const showToast = (msg) => {
     setToast(msg);
